@@ -68,7 +68,7 @@ export function buildHistory(services: Services) {
       lines.push(`\n${w}`);
       for (const l of recentLifts.filter((entry) => entry.iso_week === w)) {
         lines.push(
-          `  ${l.lift}: ${String(l.weight_kg)}kg ${l.completed ? "✅" : "❌"}`,
+          `  ${l.lift}: ${String(l.weight_kg)}kg ${l.made ? "✅" : "❌"}`,
         );
       }
       const bw = recentBws.find((b) => b.iso_week === w);
@@ -83,7 +83,7 @@ export function buildHistory(services: Services) {
 function formatLog(rows: LogEntry[], lift: Lift): string {
   if (rows.length === 0) return `No ${lift} entries yet.`;
   const lines = rows.map(
-    (r) => `${r.iso_week}: ${String(r.weight_kg)}kg ${r.completed ? "✅" : "❌"}`,
+    (r) => `${r.iso_week}: ${String(r.weight_kg)}kg ${r.made ? "✅" : "❌"}`,
   );
   return `Your last ${String(WEEKS_TO_SHOW)} ${lift} entries:\n${lines.join("\n")}`;
 }

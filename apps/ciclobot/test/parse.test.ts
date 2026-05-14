@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
-import { CmSchema, DoneFlagSchema, KgSchema } from "../src/domain/parse.js";
+import { CmSchema, KgSchema, MadeFlagSchema } from "../src/domain/parse.js";
 
 describe("KgSchema", () => {
   it("parses plain numbers", () => {
@@ -26,18 +26,40 @@ describe("CmSchema", () => {
   });
 });
 
-describe("DoneFlagSchema", () => {
-  for (const yes of ["y", "yes", "Y", "TRUE", "true", "1", "✅"]) {
-    it(`accepts "${yes}" as true`, () => {
-      assert.equal(DoneFlagSchema.parse(yes), true);
+describe("MadeFlagSchema", () => {
+  for (const t of [
+    "made",
+    "MADE",
+    "y",
+    "yes",
+    "Y",
+    "TRUE",
+    "true",
+    "1",
+    "✅",
+  ]) {
+    it(`accepts "${t}" as true`, () => {
+      assert.equal(MadeFlagSchema.parse(t), true);
     });
   }
-  for (const no of ["n", "no", "N", "FALSE", "false", "0", "❌"]) {
-    it(`accepts "${no}" as false`, () => {
-      assert.equal(DoneFlagSchema.parse(no), false);
+  for (const f of [
+    "missed",
+    "miss",
+    "MISSED",
+    "n",
+    "no",
+    "N",
+    "FALSE",
+    "false",
+    "0",
+    "❌",
+  ]) {
+    it(`accepts "${f}" as false`, () => {
+      assert.equal(MadeFlagSchema.parse(f), false);
     });
   }
   it("rejects nonsense", () => {
-    assert.equal(DoneFlagSchema.safeParse("maybe").success, false);
+    assert.equal(MadeFlagSchema.safeParse("maybe").success, false);
+    assert.equal(MadeFlagSchema.safeParse("done").success, false);
   });
 });

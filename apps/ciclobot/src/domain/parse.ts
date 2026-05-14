@@ -1,22 +1,47 @@
 import { z } from "zod";
 
-const TRUE_TOKENS = new Set(["y", "yes", "true", "t", "1", "✅", "✓"]);
-const FALSE_TOKENS = new Set(["n", "no", "false", "f", "0", "❌", "✗", "x"]);
+const MADE_TOKENS = new Set([
+  "made",
+  "y",
+  "yes",
+  "true",
+  "t",
+  "1",
+  "✅",
+  "✓",
+]);
+const MISSED_TOKENS = new Set([
+  "missed",
+  "miss",
+  "n",
+  "no",
+  "false",
+  "f",
+  "0",
+  "❌",
+  "✗",
+  "x",
+]);
 
-export const DoneFlagSchema = z.preprocess((raw, ctx) => {
+/**
+ * Parse the "did you make the lift" flag. Canonical tokens: `made` / `missed`.
+ * `made` means all 5 sets × 5 reps cleanly; `missed` means anything short of
+ * that (failed a rep, only did 5x3, etc.). Yes/no/✅/❌ are accepted aliases.
+ */
+export const MadeFlagSchema = z.preprocess((raw, ctx) => {
   if (typeof raw !== "string") {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Expected a yes/no value",
+      message: "Expected made/missed",
     });
     return z.NEVER;
   }
   const normalized = raw.trim().toLowerCase();
-  if (TRUE_TOKENS.has(normalized)) return true;
-  if (FALSE_TOKENS.has(normalized)) return false;
+  if (MADE_TOKENS.has(normalized)) return true;
+  if (MISSED_TOKENS.has(normalized)) return false;
   ctx.addIssue({
     code: z.ZodIssueCode.custom,
-    message: "Use yes/no, y/n, true/false, ✅/❌",
+    message: "Use `made` or `missed` (also yes/no, ✅/❌)",
   });
   return z.NEVER;
 }, z.boolean());

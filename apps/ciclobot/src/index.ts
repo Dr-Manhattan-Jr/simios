@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   await bot.api.setMyCommands([
     { command: "join", description: "Enter the challenge" },
     { command: "leave", description: "Leave the challenge" },
-    { command: "log", description: "Log a lift: /log <lift> <kg> <done>" },
+    { command: "log", description: "Log a lift: /log <lift> <kg> <made|missed>" },
     { command: "weight", description: "Log body weight: /weight <kg>" },
     { command: "week", description: "Show this week's table" },
     { command: "history", description: "Show your last 8 weeks" },

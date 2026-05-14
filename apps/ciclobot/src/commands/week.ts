@@ -38,7 +38,7 @@ export function buildWeek(services: Services) {
           (e) => e.user_id === p.user_id && e.lift === lift,
         );
         if (entry === undefined) return missingSymbol;
-        return `${String(entry.weight_kg)}kg ${entry.completed ? "✅" : "❌"}`;
+        return `${String(entry.weight_kg)}kg ${entry.made ? "✅" : "❌"}`;
       };
       const bw = bwsThisWeek.find((e) => e.user_id === p.user_id);
       const bwCell = bw === undefined ? "—" : `${String(bw.weight_kg)}kg`;

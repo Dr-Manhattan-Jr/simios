@@ -23,7 +23,7 @@ export const HEADER: Row = [
   "username",
   "lift",
   "weight_kg",
-  "completed",
+  "made",
   "logged_at",
 ];
 
@@ -53,7 +53,7 @@ const RawRowSchema = z
       user_id: cols[2],
       lift: cols[4],
       weight_kg: cols[5],
-      completed: cols[6],
+      made: cols[6],
       logged_at: cols[7],
     };
     return LogEntrySchema.parse(withOptional(base, "username", cols[3]));
@@ -93,7 +93,7 @@ export function createTable(client: SheetsClient): LogTable {
         e.username ?? "",
         e.lift,
         String(e.weight_kg),
-        e.completed ? "true" : "false",
+        e.made ? "true" : "false",
         e.logged_at,
       ];
     },

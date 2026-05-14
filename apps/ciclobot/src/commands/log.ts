@@ -4,9 +4,11 @@ import type { BotContext } from "../context.js";
 import type { Services } from "../services.js";
 import { ALL_LIFTS, parseLift } from "../domain/lifts.js";
 import { LogEntrySchema, type LogEntry } from "../domain/log-entry.js";
-import { DoneFlagSchema, KgSchema } from "../domain/parse.js";
+import { KgSchema, MadeFlagSchema } from "../domain/parse.js";
 import { isActive } from "../domain/participant.js";
 import { currentIsoWeek, currentWeekStart } from "../domain/week.js";
+
+const USAGE = "Usage: /log <lift> <kg> <made|missed>\nExample: /log bench 100 made";
 
 export function buildLog(services: Services) {
   return async function handleLog(ctx: BotContext): Promise<void> {
@@ -24,14 +26,12 @@ export function buildLog(services: Services) {
     const text = ctx.message?.text ?? "";
     const args = text.split(/\s+/).slice(1);
     if (args.length < 3) {
-      await ctx.reply(
-        "Usage: /log <lift> <weight_kg> <done>\nExample: /log bench 100 yes",
-      );
+      await ctx.reply(USAGE);
       return;
     }
-    const [liftRaw, weightRaw, doneRaw] = args;
-    if (liftRaw === undefined || weightRaw === undefined || doneRaw === undefined) {
-      await ctx.reply("Missing argument. Usage: /log <lift> <weight_kg> <done>");
+    const [liftRaw, weightRaw, madeRaw] = args;
+    if (liftRaw === undefined || weightRaw === undefined || madeRaw === undefined) {
+      await ctx.reply(`Missing argument.\n${USAGE}`);
       return;
     }
 
@@ -41,7 +41,7 @@ export function buildLog(services: Services) {
       await ctx.reply(
         `❌ "${liftRaw}" isn't a valid lift.\n\n` +
           `Allowed lifts (type exactly, no aliases):\n${list}\n\n` +
-          `Example: /log bench 100 yes`,
+          `Example: /log bench 100 made`,
       );
       return;
     }
@@ -53,10 +53,12 @@ export function buildLog(services: Services) {
       );
       return;
     }
-    const completed = DoneFlagSchema.safeParse(doneRaw);
-    if (!completed.success) {
+    const made = MadeFlagSchema.safeParse(madeRaw);
+    if (!made.success) {
       await ctx.reply(
-        `Couldn't read "${doneRaw}" as yes/no. Try y/n, yes/no, true/false, ✅/❌.`,
+        `Couldn't read "${madeRaw}".\n\n` +
+          `Use "made" if you hit all 5×5 cleanly, "missed" if you failed any rep ` +
+          `(also y/n, yes/no, ✅/❌).`,
       );
       return;
     }
@@ -72,7 +74,7 @@ export function buildLog(services: Services) {
       user_id: user.user_id,
       lift,
       weight_kg: weight.data,
-      completed: completed.data,
+      made: made.data,
       logged_at: now.toISOString(),
     };
     const parsed = LogEntrySchema.safeParse(
@@ -87,7 +89,7 @@ export function buildLog(services: Services) {
 
     await services.log.upsert(entry);
     await ctx.reply(
-      `Logged ${lift}: ${String(weight.data)} kg ${completed.data ? "✅" : "❌"} for ${isoWeek}.`,
+      `Logged ${lift}: ${String(weight.data)} kg ${made.data ? "✅ made" : "❌ missed"} for ${isoWeek}.`,
     );
   };
 }

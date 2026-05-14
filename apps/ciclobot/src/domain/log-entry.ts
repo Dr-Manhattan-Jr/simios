@@ -12,7 +12,8 @@ export const LogEntrySchema = z.object({
   username: z.string().optional(),
   lift: LiftSchema,
   weight_kg: z.number().min(LIFT_WEIGHT_MIN_KG).max(LIFT_WEIGHT_MAX_KG),
-  completed: z.boolean(),
+  /** Did the lifter hit all 5 sets × 5 reps at this weight? */
+  made: z.boolean(),
   logged_at: z.string().min(1),
 });
 export type LogEntry = z.infer<typeof LogEntrySchema>;
