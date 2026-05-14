@@ -2,6 +2,7 @@ import { onlyChat } from "@simios/telegram-kit";
 import { Bot, InputFile } from "grammy";
 import { loadConfig } from "./config.js";
 import { createGeminiImageClient } from "./gemini/image.js";
+import { pickMonkeyPhrase } from "./domain/monkey-talk.js";
 import { buildPromptParts, renderPrompt } from "./domain/prompt.js";
 import { compileTriggers, matchesTrigger } from "./domain/trigger.js";
 
@@ -37,9 +38,13 @@ async function main(): Promise<void> {
 
     const parts = buildPromptParts();
     const prompt = renderPrompt(parts);
+    const banter = pickMonkeyPhrase();
     console.log(`tractorbot: triggered, prompt="${prompt}"`);
 
     try {
+      await ctx.reply(banter, {
+        reply_parameters: { message_id: ctx.message.message_id },
+      });
       await ctx.replyWithChatAction("upload_photo");
       const image = await gemini.generate(prompt);
       await ctx.replyWithPhoto(new InputFile(image.bytes, "tractor.png"), {
