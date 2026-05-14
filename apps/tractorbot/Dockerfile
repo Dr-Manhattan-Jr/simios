@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
 
@@ -23,7 +23,7 @@ RUN pnpm -F @simios/env build \
 RUN pnpm --filter=tractorbot --prod --legacy deploy /app/deploy
 
 
-FROM node:20-alpine AS runtime
+FROM node:24-alpine AS runtime
 
 RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
 

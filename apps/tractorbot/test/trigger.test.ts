@@ -1,8 +1,8 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
-import { matchesTrigger } from "../src/domain/trigger.js";
+import { compileTriggers, matchesTrigger } from "../src/domain/trigger.js";
 
-const TRIGGERS = ["claude", "claudio"];
+const TRIGGERS = compileTriggers(["claude", "claudio"]);
 
 describe("matchesTrigger", () => {
   it("matches the word at the start of a message", () => {

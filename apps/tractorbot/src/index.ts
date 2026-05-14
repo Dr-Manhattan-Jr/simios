@@ -3,7 +3,7 @@ import { Bot, InputFile } from "grammy";
 import { loadConfig } from "./config.js";
 import { createGeminiImageClient } from "./gemini/image.js";
 import { buildPromptParts, renderPrompt } from "./domain/prompt.js";
-import { matchesTrigger } from "./domain/trigger.js";
+import { compileTriggers, matchesTrigger } from "./domain/trigger.js";
 
 async function main(): Promise<void> {
   console.log("tractorbot: validating environment…");
@@ -18,6 +18,7 @@ async function main(): Promise<void> {
     model: config.geminiModel,
   });
 
+  const triggerPatterns = compileTriggers(config.triggerWords);
   const bot = new Bot(config.botToken);
   bot.use(onlyChat(config.chatId));
 
@@ -26,7 +27,7 @@ async function main(): Promise<void> {
 
   bot.on("message:text", async (ctx) => {
     const text = ctx.message.text;
-    if (!matchesTrigger(text, config.triggerWords)) return;
+    if (!matchesTrigger(text, triggerPatterns)) return;
 
     const now = Date.now();
     if (now - lastFiredAt < config.cooldownSeconds * 1000) return;
@@ -45,7 +46,7 @@ async function main(): Promise<void> {
         caption: `🐒🚜 ${parts.style}`,
         reply_parameters: { message_id: ctx.message.message_id },
       });
-    } catch (err: unknown) {
+    } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("tractorbot: generation failed:", message);
     } finally {

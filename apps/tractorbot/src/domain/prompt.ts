@@ -78,9 +78,7 @@ const MOODS = [
 ];
 
 function pickOne<T>(rng: () => number, arr: readonly T[]): T {
-  const idx = Math.floor(rng() * arr.length);
-  const clamped = Math.min(Math.max(idx, 0), arr.length - 1);
-  const value = arr[clamped];
+  const value = arr[Math.floor(rng() * arr.length)];
   if (value === undefined) {
     throw new Error("pickOne: empty array");
   }

@@ -6,7 +6,7 @@
   "description": "Monorepo for Telegram bots and related tooling.",
   "packageManager": "pnpm@10.27.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "build": "pnpm -r build",

@@ -37,15 +37,13 @@ export interface GeminiImageClient {
 export function createGeminiImageClient(params: {
   readonly apiKey: string;
   readonly model: string;
-  readonly fetchImpl?: typeof fetch;
 }): GeminiImageClient {
-  const f = params.fetchImpl ?? fetch;
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `${encodeURIComponent(params.model)}:generateContent`;
   return {
     async generate(prompt: string): Promise<GeminiImage> {
-      const response = await f(url, {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
