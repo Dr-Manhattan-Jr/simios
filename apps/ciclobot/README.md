@@ -1,5 +1,7 @@
 # ciclobot
 
+![ciclobot](./docs/banner.png)
+
 Telegram bot that tracks a small group's weekly 5×5 weightlifting numbers in a Google Sheet, and nudges anyone who hasn't logged by Sunday evening.
 
 ## What it does

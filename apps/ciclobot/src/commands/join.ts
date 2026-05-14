@@ -2,6 +2,7 @@ import { parseTelegramUser } from "@simios/telegram-kit";
 import { withOptional } from "@simios/sheets-client";
 import type { BotContext, BotConversation, ConvContext } from "../context.js";
 import type { Services } from "../services.js";
+import { shapeJoke } from "../domain/bmi-joke.js";
 import { CmSchema, KgSchema } from "../domain/parse.js";
 import {
   BodyweightKgSchema,
@@ -31,10 +32,11 @@ export function buildJoinConversation(services: Services) {
     if (existing !== undefined) {
       heightCm = existing.height_cm;
       await ctx.reply(
-        `Welcome back, ${user.first_name}. Skipping the height question (already on file: ${String(heightCm)} cm).`,
+        `Welcome back, ${user.first_name}. Height already on file: ${String(heightCm)} cm.`,
       );
     } else {
       heightCm = await askHeight(conversation, ctx);
+      await ctx.reply(`Got it — ${String(heightCm)} cm. One more question…`);
     }
 
     const weightKg = await askWeight(conversation, ctx);
@@ -69,8 +71,12 @@ export function buildJoinConversation(services: Services) {
 
     await conversation.external(() => services.bodyweight.upsert(bwEntry));
 
+    const joke = shapeJoke(heightCm, weightKg, user.user_id);
     await ctx.reply(
-      `You're in. Height: ${String(heightCm)} cm. Body weight this week: ${String(weightKg)} kg. Use /help to see all commands.`,
+      `✅ You're in, ${user.first_name}.\n` +
+        `Height ${String(heightCm)} cm · weight ${String(weightKg)} kg.\n\n` +
+        `${joke.line}\n\n` +
+        `Now log something: /log bench 100 yes`,
     );
   };
 }
