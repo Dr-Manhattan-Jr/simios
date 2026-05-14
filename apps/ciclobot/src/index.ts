@@ -2,7 +2,7 @@ import {
   conversations,
   createConversation,
 } from "@grammyjs/conversations";
-import { onlyChat } from "@simios/telegram-kit";
+import { onlyChat, startHealthServer } from "@simios/telegram-kit";
 import { Bot } from "grammy";
 import cron from "node-cron";
 import { loadConfig } from "./config.js";
@@ -77,10 +77,20 @@ async function main(): Promise<void> {
     { timezone: config.timeZone },
   );
 
+  // Flip to true after the bot's long poll is actually running.
+  let healthy = false;
+  startHealthServer({ isHealthy: () => healthy });
+
   console.log(
     `ciclobot starting — chat ${String(config.chatId)}, tz ${config.timeZone}`,
   );
-  await bot.start();
+  // bot.start() awaits forever; flag healthy from grammY's onStart hook.
+  await bot.start({
+    onStart: () => {
+      healthy = true;
+      console.log("ciclobot: long polling started");
+    },
+  });
 }
 
 main().catch((err: unknown) => {

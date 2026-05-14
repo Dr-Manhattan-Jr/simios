@@ -1,3 +1,4 @@
+import { createServer, type Server } from "node:http";
 import { Context, MiddlewareFn, NextFunction } from "grammy";
 import { z } from "zod";
 
@@ -50,4 +51,41 @@ export function mention(user: TelegramUser): string {
     return `@${user.username}`;
   }
   return user.first_name;
+}
+
+/**
+ * Start a tiny HTTP server on PORT (Railway sets this automatically) so the
+ * host can run an HTTP healthcheck against a long-polling bot. Without this,
+ * Railway has no way to confirm the bot is actually alive — it just sees a
+ * process running and times out the deploy.
+ *
+ * Routes:
+ *   GET /health → 200 "ok" once isHealthy() returns true, else 503.
+ *   anything else → 404.
+ */
+export function startHealthServer(args: {
+  port?: number;
+  isHealthy: () => boolean;
+}): Server {
+  const port = args.port ?? Number(process.env["PORT"] ?? "8080");
+  const server = createServer((req, res) => {
+    if (req.url === "/health") {
+      if (args.isHealthy()) {
+        res.statusCode = 200;
+        res.setHeader("content-type", "text/plain");
+        res.end("ok");
+      } else {
+        res.statusCode = 503;
+        res.setHeader("content-type", "text/plain");
+        res.end("starting");
+      }
+      return;
+    }
+    res.statusCode = 404;
+    res.end();
+  });
+  server.listen(port, () => {
+    console.log(`health server listening on :${String(port)}`);
+  });
+  return server;
 }
