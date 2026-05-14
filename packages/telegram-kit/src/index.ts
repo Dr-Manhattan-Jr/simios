@@ -36,7 +36,20 @@ export function parseTelegramUser(ctx: Context): TelegramUser | undefined {
 /** Reject updates from any chat other than the configured chat. */
 export function onlyChat(chatId: number): MiddlewareFn<Context> {
   return async (ctx: Context, next: NextFunction) => {
-    if (ctx.chat?.id !== chatId) return;
+    const incoming = ctx.chat?.id;
+    if (incoming !== chatId) {
+      // Log dropped updates so it's debuggable when the bot is added to the
+      // wrong chat or CHAT_ID was set to the wrong number (e.g. supergroup
+      // ID without the -100 prefix). Keep noise low: log only if the
+      // incoming chat is known.
+      if (incoming !== undefined) {
+        console.warn(
+          `onlyChat: dropping update from chat ${String(incoming)} ` +
+            `(expected ${String(chatId)})`,
+        );
+      }
+      return;
+    }
     await next();
   };
 }
