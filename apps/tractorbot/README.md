@@ -8,9 +8,10 @@ Telegram bot that listens to a group chat and, whenever someone says the word **
 
 - **Listens to every text message** in one configured group.
 - **Trigger words** (default `claude,claudio`, case-insensitive, whole-word match) fire a generation.
-- **Each generation** picks random parts (style/tractor/setting/quirk/mood) and asks `gemini-2.5-flash-image` for an image.
-- **Reply** with the photo, captioned with the style.
-- **Cooldown** (default 30 s) keeps spam contained when the chat is hot.
+- **Each generation** picks random parts (style/tractor/setting/quirk/mood/pose/camera-angle/time-of-day/lighting) and asks `gemini-2.5-flash-image` for an image.
+- **Whatever else you wrote alongside the trigger word becomes part of the prompt** — `claude un buen john deere` steers the image toward a John Deere; `claude pirate ship` makes the tractor a pirate ship. Empty messages (just `claude`) generate fully at random.
+- **Reply** with the photo, captioned with the style and (if you gave one) your hint.
+- **Cooldown** (default 60 s) keeps spam contained when the chat is hot.
 
 ## Telegram privacy setting — read this
 
@@ -37,7 +38,7 @@ You need:
 | `GEMINI_API_KEY` | yes | — | AI Studio key. |
 | `CHAT_ID` | yes | — | Negative numeric ID of the target group. |
 | `TRIGGER_WORDS` | no | `claude,claudio` | Comma-separated, case-insensitive, whole-word. |
-| `COOLDOWN_SECONDS` | no | `30` | Minimum seconds between successful generations. |
+| `COOLDOWN_SECONDS` | no | `60` | Minimum seconds between successful generations. |
 | `GEMINI_MODEL` | no | `gemini-2.5-flash-image` | Override only if Google renames the model. |
 
 ## Deploy

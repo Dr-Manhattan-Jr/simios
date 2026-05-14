@@ -17,7 +17,7 @@ const RawEnvSchema = z.object({
   GEMINI_API_KEY: NonEmptyString,
   CHAT_ID: z.coerce.number().int(),
   TRIGGER_WORDS: TriggerWords.default("claude,claudio"),
-  COOLDOWN_SECONDS: z.coerce.number().int().min(0).default(30),
+  COOLDOWN_SECONDS: z.coerce.number().int().min(0).default(60),
   GEMINI_MODEL: NonEmptyString.default("gemini-2.5-flash-image"),
 });
 

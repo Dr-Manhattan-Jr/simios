@@ -23,4 +23,20 @@ describe("prompt builder", () => {
     const b = renderPrompt(buildPromptParts(seeded(99)));
     assert.notEqual(a, b);
   });
+
+  it("embeds the user hint when provided", () => {
+    const parts = buildPromptParts(seeded(1));
+    const text = renderPrompt(parts, "un buen john deere");
+    assert.match(text, /un buen john deere/);
+  });
+
+  it("matches the no-hint output when hint is undefined", () => {
+    const parts = buildPromptParts(seeded(1));
+    assert.equal(renderPrompt(parts, undefined), renderPrompt(parts));
+  });
+
+  it("ignores empty-string hint", () => {
+    const parts = buildPromptParts(seeded(1));
+    assert.equal(renderPrompt(parts, ""), renderPrompt(parts));
+  });
 });

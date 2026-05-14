@@ -37,7 +37,7 @@ describe("loadConfig", () => {
     assert.equal(config.geminiApiKey, "key-123");
     assert.equal(config.chatId, -1001234567890);
     assert.deepEqual(config.triggerWords, ["claude", "claudio"]);
-    assert.equal(config.cooldownSeconds, 30);
+    assert.equal(config.cooldownSeconds, 60);
     assert.equal(config.geminiModel, "gemini-2.5-flash-image");
   });
 

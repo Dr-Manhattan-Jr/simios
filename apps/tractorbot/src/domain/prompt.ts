@@ -296,10 +296,11 @@ export function buildPromptParts(rng: () => number = Math.random): PromptParts {
   };
 }
 
-export function renderPrompt(parts: PromptParts): string {
-  return (
+export function renderPrompt(parts: PromptParts, userHint?: string): string {
+  const base =
     `${parts.cameraAngle}. A ${parts.style} of a monkey driving a ${parts.tractor} ${parts.setting}, ${parts.timeOfDay}. ` +
     `The monkey is ${parts.quirk}, ${parts.pose}, ${parts.mood}. ` +
-    `${parts.lighting}. High detail, clearly the monkey is the driver behind the wheel.`
-  );
+    `${parts.lighting}. High detail, clearly the monkey is the driver behind the wheel.`;
+  if (userHint === undefined || userHint.length === 0) return base;
+  return `${base} The user requested: "${userHint}" — incorporate this idea into the scene while keeping the monkey-driving-a-tractor concept clearly recognizable.`;
 }
