@@ -84,6 +84,19 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  console.error("Fatal:", err);
+  if (
+    err !== null &&
+    typeof err === "object" &&
+    "error_code" in err &&
+    err.error_code === 409
+  ) {
+    console.error(
+      "Fatal: another ciclobot instance is already long-polling this token. " +
+        "Stop the other one (local dev process, previous Railway deploy still draining, " +
+        "or a second service using the same BOT_TOKEN) and this one will recover.",
+    );
+  } else {
+    console.error("Fatal:", err);
+  }
   process.exit(1);
 });
