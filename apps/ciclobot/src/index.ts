@@ -24,7 +24,11 @@ import { buildUndo } from "./commands/undo.js";
 import { runReminder } from "./reminder.js";
 
 async function main(): Promise<void> {
+  console.log("ciclobot: validating environment…");
   const config = loadConfig();
+  console.log(
+    `ciclobot: environment OK (chat ${String(config.chatId)}, tz ${config.timeZone})`,
+  );
   const services = createServices(config);
 
   await ensureSheetsReady(services);
