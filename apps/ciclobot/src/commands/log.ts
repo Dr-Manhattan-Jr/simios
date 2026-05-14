@@ -37,8 +37,11 @@ export function buildLog(services: Services) {
 
     const lift = parseLift(liftRaw);
     if (lift === undefined) {
+      const list = ALL_LIFTS.map((l) => `• ${l}`).join("\n");
       await ctx.reply(
-        `Unknown lift "${liftRaw}". Allowed: ${ALL_LIFTS.join(", ")}.`,
+        `❌ "${liftRaw}" isn't a valid lift.\n\n` +
+          `Allowed lifts (type exactly, no aliases):\n${list}\n\n` +
+          `Example: /log bench 100 yes`,
       );
       return;
     }

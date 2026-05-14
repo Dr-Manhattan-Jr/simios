@@ -33,6 +33,13 @@ describe("parseLift", () => {
     assert.equal(parseLift("dl"), undefined);
     assert.equal(parseLift(""), undefined);
   });
+
+  it("rejects common typos so the user sees the allowlist", () => {
+    assert.equal(parseLift("bency"), undefined);
+    assert.equal(parseLift("benchpress"), undefined);
+    assert.equal(parseLift("squats"), undefined);
+    assert.equal(parseLift("deads"), undefined);
+  });
 });
 
 describe("isRequired", () => {
