@@ -28,7 +28,7 @@ Mostly me, and a handful of friends. If you want to:
 - **TypeScript strict mode** with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
 - **Zod is the source of truth for every data shape.** TS types are derived via `z.infer`. No `as`, no `!`, no `any` — enforced by `eslint`.
 - **pnpm workspaces.** Each app and each shared package has its own `package.json` and `tsconfig.json` extending `tsconfig.base.json`.
-- **Dockerfile at the root** builds whichever app is configured to deploy (currently `ciclobot`).
+- **One Dockerfile per app**, living alongside the app's source (e.g. `apps/ciclobot/Dockerfile`). Build context is always the repo root so the Dockerfile can pull in shared `packages/*` and the workspace lockfile.
 
 ## Develop
 

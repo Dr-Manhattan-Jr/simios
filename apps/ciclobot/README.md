@@ -63,8 +63,9 @@ The bot uses long polling — no public HTTP port, no domain, no webhook setup.
 1. Push this repo to GitHub.
 2. In Railway, **New Project → Deploy from GitHub repo** → pick this repo.
 3. After the initial detection, open the service settings:
-   - **Root Directory:** leave at `/` (the Dockerfile builds the whole workspace).
-   - **Builder:** Dockerfile (Railway auto-detects `Dockerfile` at repo root).
+   - **Root Directory:** leave at `/` (the build needs the repo-root `pnpm-workspace.yaml` and `packages/*`).
+   - **Builder:** Dockerfile.
+   - **Dockerfile Path:** `apps/ciclobot/Dockerfile` (each app owns its own Dockerfile so future bots can have different runtime needs).
 4. **Variables** tab → add:
    - `BOT_TOKEN` = the BotFather token from step 1.
    - `SHEET_ID` = the spreadsheet ID from step 3.
