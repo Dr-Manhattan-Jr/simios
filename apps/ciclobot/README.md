@@ -61,18 +61,14 @@ If the JSON is empty, the bot hasn't seen any updates yet — try sending anothe
 The bot uses long polling — no public HTTP port, no domain, no webhook setup.
 
 1. Push this repo to GitHub.
-2. In Railway, **New Project → Deploy from GitHub repo** → pick this repo.
-3. After the initial detection, open the service settings:
-   - **Root Directory:** leave at `/` (the build needs the repo-root `pnpm-workspace.yaml` and `packages/*`).
-   - **Builder:** Dockerfile.
-   - **Dockerfile Path:** `apps/ciclobot/Dockerfile` (each app owns its own Dockerfile so future bots can have different runtime needs).
-4. **Variables** tab → add:
+2. In Railway, create (or open) a project, then **+ Create → GitHub Repo** and pick this repo. The `railway.toml` at the repo root configures the Dockerfile path, builder, and restart policy automatically — no manual dashboard settings needed.
+3. **Variables** tab → add:
    - `BOT_TOKEN` = the BotFather token from step 1.
    - `SHEET_ID` = the spreadsheet ID from step 3.
    - `CHAT_ID` = the negative chat ID from step 2.
    - `TZ` = `Europe/Madrid` (or your timezone).
    - `GOOGLE_SERVICE_ACCOUNT_JSON` = paste the **entire contents** of the JSON file from step 4 as one variable value. Railway accepts multiline values.
-5. Deploy. The first log line should be `ciclobot starting — chat <CHAT_ID>, tz Europe/Madrid`.
+4. Deploy. The first log line should be `ciclobot starting — chat <CHAT_ID>, tz Europe/Madrid`.
 
 ### 6. Verify
 
