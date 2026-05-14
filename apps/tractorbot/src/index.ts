@@ -6,7 +6,6 @@ import {
 import { Bot, InputFile } from "grammy";
 import { loadConfig } from "./config.js";
 import { createGeminiImageClient } from "./gemini/image.js";
-import { pickMonkeyPhrase } from "./domain/monkey-talk.js";
 import { buildPromptParts, renderPrompt } from "./domain/prompt.js";
 import {
   compileTriggers,
@@ -47,15 +46,11 @@ async function main(): Promise<void> {
     const parts = buildPromptParts();
     const userHint = extractUserHint(text, config.triggerWords);
     const prompt = renderPrompt(parts, userHint);
-    const banter = pickMonkeyPhrase();
     console.log(
       `tractorbot: triggered${userHint === undefined ? "" : ` (hint="${userHint}")`}, prompt="${prompt}"`,
     );
 
     try {
-      await ctx.reply(banter, {
-        reply_parameters: { message_id: ctx.message.message_id },
-      });
       await ctx.replyWithChatAction("upload_photo");
       const image = await gemini.generate(prompt);
       const caption =

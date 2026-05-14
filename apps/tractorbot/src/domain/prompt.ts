@@ -297,10 +297,21 @@ export function buildPromptParts(rng: () => number = Math.random): PromptParts {
 }
 
 export function renderPrompt(parts: PromptParts, userHint?: string): string {
-  const base =
-    `${parts.cameraAngle}. A ${parts.style} of a monkey driving a ${parts.tractor} ${parts.setting}, ${parts.timeOfDay}. ` +
+  const flavor =
+    `Style: ${parts.style}. Tractor: ${parts.tractor}. Setting: ${parts.setting}, ${parts.timeOfDay}. ` +
     `The monkey is ${parts.quirk}, ${parts.pose}, ${parts.mood}. ` +
-    `${parts.lighting}. High detail, clearly the monkey is the driver behind the wheel.`;
-  if (userHint === undefined || userHint.length === 0) return base;
-  return `${base} The user requested: "${userHint}" — incorporate this idea into the scene while keeping the monkey-driving-a-tractor concept clearly recognizable.`;
+    `Camera: ${parts.cameraAngle}. ${parts.lighting}.`;
+  if (userHint === undefined || userHint.length === 0) {
+    return (
+      `Generate an image of a monkey driving a tractor. ${flavor} ` +
+      `High detail, clearly the monkey is the driver behind the wheel.`
+    );
+  }
+  return (
+    `Generate an image of a monkey driving a tractor, on the theme: "${userHint}". ` +
+    `Interpret that theme literally if it names objects, characters, or places (use them in the scene). ` +
+    `If it is a question, an opinion, or an abstract idea, depict the monkey-and-tractor scene visually expressing the answer or mood. ` +
+    `The monkey driving a tractor must remain the unambiguous subject of the image. ` +
+    `${flavor} High detail.`
+  );
 }
