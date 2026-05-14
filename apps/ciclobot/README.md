@@ -24,8 +24,8 @@ You will need:
 1. Open Telegram and message [@BotFather](https://t.me/BotFather).
 2. Send `/newbot`. Pick a display name (e.g. "Ciclobot") and a username ending in `bot` (e.g. `myciclobot_bot`).
 3. Copy the **HTTP API token** BotFather replies with. You'll use this as `BOT_TOKEN`.
-4. Send `/setprivacy` to BotFather → pick your bot → choose **Enable**. (This is the default; commands still reach the bot, but ordinary chatter doesn't.)
-5. Add the bot to your Telegram group. It does **not** need to be an admin.
+4. *(Optional, recommended.)* In BotFather, send `/setprivacy` → pick your bot → choose **Enable**. This is the default for new bots, so it's already on — but verifying takes 5 seconds and avoids a known caching quirk where adding a bot to a group before this is set can leave it in the wrong state. "Privacy Enabled" means the bot only sees slash commands, replies, and @-mentions — never ordinary group chatter. That's what you want.
+5. Add the bot to your Telegram group. It does **not** need to be an admin. If the bot was already in the group when you toggled privacy in step 4, remove it and re-add it so the change takes effect.
 
 ### 2. Find the group's chat ID
 
