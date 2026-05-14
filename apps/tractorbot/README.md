@@ -1,5 +1,7 @@
 # tractorbot
 
+![tractorbot](./docs/banner.png)
+
 Telegram bot that listens to a group chat and, whenever someone says the word **claude** or **claudio**, replies with a freshly Gemini-generated image of a monkey driving a tractor. Each prompt randomizes style, tractor, setting, and quirks for entropy.
 
 ## What it does
@@ -40,7 +42,12 @@ You need:
 
 ## Deploy
 
-Railway, same pattern as ciclobot, but pointed at `apps/tractorbot/Dockerfile`. Create a **separate Railway service** (so it has its own `BOT_TOKEN`) and either point a new `railway.toml`-style build or set the Dockerfile path in the dashboard to `apps/tractorbot/Dockerfile`.
+Add tractorbot as a **second service inside the same Railway project as ciclobot** (so logs and billing stay together). One-time setup in the new service's **Settings**:
+
+1. **Source** → the same GitHub repo.
+2. **Config-as-Code** → set the config file path to `/apps/tractorbot/railway.toml`. That file pins the Dockerfile path, the restart policy, and zero-overlap deploys (Telegram allows only one consumer of `getUpdates` per token).
+
+Railway does **not** support a single root `railway.toml` covering multiple services — each service needs its own Config-as-Code path pointing at its own file under `apps/<bot>/railway.toml`.
 
 ## Local dev
 
