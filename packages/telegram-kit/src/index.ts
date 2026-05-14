@@ -1,5 +1,5 @@
 import { createServer, type Server } from "node:http";
-import { Context, MiddlewareFn, NextFunction } from "grammy";
+import { Bot, Context, MiddlewareFn, NextFunction } from "grammy";
 import { z } from "zod";
 
 export const TelegramUserSchema = z.object({
@@ -88,4 +88,57 @@ export function startHealthServer(args: {
     console.log(`health server listening on :${String(port)}`);
   });
   return server;
+}
+
+function isConflict409(err: unknown): boolean {
+  return (
+    err !== null &&
+    typeof err === "object" &&
+    "error_code" in err &&
+    err.error_code === 409
+  );
+}
+
+/**
+ * Start a grammY bot's long poll, retrying when Telegram returns 409
+ * (another consumer of getUpdates owns this token). Rolling deploys
+ * always race the new container against the old one for the poll —
+ * without retry, the new container would die instantly and Railway
+ * never tears the old one down. We keep trying until the previous
+ * owner gives up (or until `deadlineMs` elapses, in which case the
+ * error bubbles up to the fatal-409 handler).
+ *
+ * Resolves only on graceful stop. Throws the original error on any
+ * non-409 failure, or the most recent 409 after the deadline.
+ */
+export async function startBotWith409Retry<C extends Context>(
+  bot: Bot<C>,
+  args: {
+    onStart: () => void;
+    deadlineMs?: number;
+    retryDelayMs?: number;
+    label?: string;
+  },
+): Promise<void> {
+  const deadlineMs = args.deadlineMs ?? 120_000;
+  const retryDelayMs = args.retryDelayMs ?? 3_000;
+  const label = args.label ?? "bot";
+  const start = Date.now();
+  let lastErr: unknown;
+  while (Date.now() - start < deadlineMs) {
+    try {
+      await bot.start({ onStart: args.onStart });
+      return;
+    } catch (err: unknown) {
+      lastErr = err;
+      if (!isConflict409(err)) throw err;
+      const waited = Math.round((Date.now() - start) / 1000);
+      console.log(
+        `${label}: 409 from Telegram (another consumer holds the token), ` +
+          `retrying in ${String(retryDelayMs / 1000)}s (waited ${String(waited)}s so far)`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+  }
+  throw lastErr;
 }

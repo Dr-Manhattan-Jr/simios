@@ -2,7 +2,11 @@ import {
   conversations,
   createConversation,
 } from "@grammyjs/conversations";
-import { onlyChat, startHealthServer } from "@simios/telegram-kit";
+import {
+  onlyChat,
+  startBotWith409Retry,
+  startHealthServer,
+} from "@simios/telegram-kit";
 import { Bot } from "grammy";
 import cron from "node-cron";
 import { loadConfig } from "./config.js";
@@ -84,8 +88,8 @@ async function main(): Promise<void> {
   console.log(
     `ciclobot starting — chat ${String(config.chatId)}, tz ${config.timeZone}`,
   );
-  // bot.start() awaits forever; flag healthy from grammY's onStart hook.
-  await bot.start({
+  await startBotWith409Retry(bot, {
+    label: "ciclobot",
     onStart: () => {
       healthy = true;
       console.log("ciclobot: long polling started");

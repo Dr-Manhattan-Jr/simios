@@ -1,4 +1,8 @@
-import { onlyChat, startHealthServer } from "@simios/telegram-kit";
+import {
+  onlyChat,
+  startBotWith409Retry,
+  startHealthServer,
+} from "@simios/telegram-kit";
 import { Bot, InputFile } from "grammy";
 import { loadConfig } from "./config.js";
 import { createGeminiImageClient } from "./gemini/image.js";
@@ -69,7 +73,8 @@ async function main(): Promise<void> {
   console.log(
     `tractorbot starting — chat ${String(config.chatId)}, model ${config.geminiModel}`,
   );
-  await bot.start({
+  await startBotWith409Retry(bot, {
+    label: "tractorbot",
     onStart: () => {
       healthy = true;
       console.log("tractorbot: long polling started");
