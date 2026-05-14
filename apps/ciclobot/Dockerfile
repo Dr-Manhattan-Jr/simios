@@ -27,10 +27,16 @@ RUN pnpm --filter=ciclobot --prod --legacy deploy /app/deploy
 
 FROM node:20-alpine AS runtime
 
+RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
+
 WORKDIR /app
 
 COPY --from=builder /app/deploy ./
 
 ENV NODE_ENV=production
 
+# CMD is used when Railway runs the Dockerfile directly. If a Railway
+# service overrides the start command (e.g. "pnpm --filter ciclobot start"
+# from a Railpack-detected setup), pnpm is now available in the runtime so
+# that path works too.
 CMD ["node", "dist/index.js"]
