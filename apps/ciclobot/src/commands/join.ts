@@ -13,6 +13,20 @@ import { currentIsoWeek, currentWeekStart } from "../domain/week.js";
 
 export const JOIN_CONVERSATION = "join";
 
+/**
+ * `force_reply` makes Telegram open the reply UI on the asker's client and
+ * marks their next message as a reply to ours. Combined with `selective:
+ * true`, only the user we're asking gets the prompt — not the whole group.
+ *
+ * This matters because Telegram's "Privacy Enabled" mode (the default for
+ * bots) hides ordinary chatter from the bot. Slash commands, @-mentions,
+ * and *replies to the bot* are the only messages it sees. Without
+ * force_reply, a bare "178" wouldn't even reach our conversation handler.
+ */
+const PROMPT_OPTS = {
+  reply_markup: { force_reply: true, selective: true },
+} as const;
+
 export function buildJoinConversation(services: Services) {
   return async function join(
     conversation: BotConversation,
@@ -76,7 +90,7 @@ export function buildJoinConversation(services: Services) {
       `✅ You're in, ${user.first_name}.\n` +
         `Height ${String(heightCm)} cm · weight ${String(weightKg)} kg.\n\n` +
         `${joke.line}\n\n` +
-        `Now log something: /log bench 100 yes`,
+        `Now log something: /log bench 100 made`,
     );
   };
 }
@@ -87,12 +101,16 @@ async function askHeight(
 ): Promise<number> {
   await ctx.reply(
     "What's your height? Please answer in centimetres (cm) — e.g. 178.",
+    PROMPT_OPTS,
   );
   for (;;) {
     const update = await conversation.wait();
     const text = update.message?.text;
     if (text === undefined) {
-      await update.reply("Please answer with a number in centimetres.");
+      await update.reply(
+        "Please answer with a number in centimetres.",
+        PROMPT_OPTS,
+      );
       continue;
     }
     if (text.trim().toLowerCase() === "/cancel") {
@@ -103,16 +121,21 @@ async function askHeight(
     if (!num.success) {
       await update.reply(
         "I couldn't read that as a number. Please use centimetres — e.g. 178.",
+        PROMPT_OPTS,
       );
       continue;
     }
     const validated = HeightCmSchema.safeParse(num.data);
     if (!validated.success) {
       if (num.data > 0 && num.data < 3) {
-        await update.reply("Please use centimetres, not metres — e.g. 178.");
+        await update.reply(
+          "Please use centimetres, not metres — e.g. 178.",
+          PROMPT_OPTS,
+        );
       } else {
         await update.reply(
           "Out of range. Please give a height between 100 and 250 cm.",
+          PROMPT_OPTS,
         );
       }
       continue;
@@ -127,12 +150,16 @@ async function askWeight(
 ): Promise<number> {
   await ctx.reply(
     "What's your current body weight? Please answer in kilograms (kg) — e.g. 82.5.",
+    PROMPT_OPTS,
   );
   for (;;) {
     const update = await conversation.wait();
     const text = update.message?.text;
     if (text === undefined) {
-      await update.reply("Please answer with a number in kilograms.");
+      await update.reply(
+        "Please answer with a number in kilograms.",
+        PROMPT_OPTS,
+      );
       continue;
     }
     if (text.trim().toLowerCase() === "/cancel") {
@@ -143,6 +170,7 @@ async function askWeight(
     if (!num.success) {
       await update.reply(
         "I couldn't read that as a number. Please use kilograms — e.g. 82.5.",
+        PROMPT_OPTS,
       );
       continue;
     }
@@ -150,6 +178,7 @@ async function askWeight(
     if (!validated.success) {
       await update.reply(
         "Out of range. Please give a body weight between 30 and 300 kg.",
+        PROMPT_OPTS,
       );
       continue;
     }
