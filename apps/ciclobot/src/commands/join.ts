@@ -113,9 +113,15 @@ async function askHeight(
       );
       continue;
     }
-    if (text.trim().toLowerCase() === "/cancel") {
+    const trimmed = text.trim();
+    if (trimmed.toLowerCase() === "/cancel") {
       await update.reply("Cancelled.");
       await conversation.halt();
+    }
+    if (trimmed.startsWith("/")) {
+      // The user sent another slash command mid-flow. Cleanly stop /join and
+      // let the update fall through so the matching command handler runs.
+      await conversation.halt({ next: true });
     }
     const num = CmSchema.safeParse(text);
     if (!num.success) {
@@ -162,9 +168,15 @@ async function askWeight(
       );
       continue;
     }
-    if (text.trim().toLowerCase() === "/cancel") {
+    const trimmed = text.trim();
+    if (trimmed.toLowerCase() === "/cancel") {
       await update.reply("Cancelled.");
       await conversation.halt();
+    }
+    if (trimmed.startsWith("/")) {
+      // Same handling as in askHeight — abort cleanly, let the slash command
+      // be handled by its registered command handler.
+      await conversation.halt({ next: true });
     }
     const num = KgSchema.safeParse(text);
     if (!num.success) {
