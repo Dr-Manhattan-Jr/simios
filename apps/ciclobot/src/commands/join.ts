@@ -188,6 +188,11 @@ async function askWeight(
 
 export function buildEnterJoin(_services: Services) {
   return async function enterJoin(ctx: BotContext): Promise<void> {
+    // Kill any stale conversation state for this user first. If a previous
+    // /join was interrupted (crash, restart, network hiccup), its conversation
+    // would otherwise resume mid-flow on the next /join, re-asking nothing and
+    // immediately mis-parsing the trigger update.
+    await ctx.conversation.exitAll();
     await ctx.conversation.enter(JOIN_CONVERSATION);
   };
 }
