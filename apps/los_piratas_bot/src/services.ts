@@ -5,6 +5,12 @@ import {
 import type { Config } from "./config.js";
 import { isActive, type Member } from "./domain/member.js";
 import {
+  createTable as createEventsTable,
+  HEADER as EVENTS_HEADER,
+  TAB as EVENTS_TAB,
+  type EventsTable,
+} from "./sheets/events.js";
+import {
   createTable as createMembersTable,
   HEADER as MEMBERS_HEADER,
   TAB as MEMBERS_TAB,
@@ -28,6 +34,7 @@ export interface Services {
   readonly sheets: SheetsClient;
   readonly members: MembersTable;
   readonly memberCache: MemberCache;
+  readonly events: EventsTable;
 }
 
 export async function createServices(config: Config): Promise<Services> {
@@ -36,7 +43,11 @@ export async function createServices(config: Config): Promise<Services> {
     spreadsheetId: config.sheetId,
   });
   const members = createMembersTable(sheets);
-  await sheets.ensureTab(MEMBERS_TAB, MEMBERS_HEADER);
+  const events = createEventsTable(sheets);
+  await Promise.all([
+    sheets.ensureTab(MEMBERS_TAB, MEMBERS_HEADER),
+    sheets.ensureTab(EVENTS_TAB, EVENTS_HEADER),
+  ]);
 
   const active = new Set<number>();
   async function refresh(): Promise<void> {
@@ -54,7 +65,7 @@ export async function createServices(config: Config): Promise<Services> {
     size: () => active.size,
   };
 
-  return { config, sheets, members, memberCache };
+  return { config, sheets, members, memberCache, events };
 }
 
 export function buildMember(args: {

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   onlyChat,
   startBotWith409Retry,
@@ -5,6 +6,7 @@ import {
 } from "@simios/telegram-kit";
 import { Bot } from "grammy";
 import cron from "node-cron";
+import { buildCrew } from "./commands/crew.js";
 import { buildJoin } from "./commands/join.js";
 import { buildLeave } from "./commands/leave.js";
 import { loadConfig } from "./config.js";
@@ -49,10 +51,12 @@ async function main(): Promise<void> {
   await bot.api.setMyCommands([
     { command: "join", description: "Join Pirate Day (only joined members are watched)" },
     { command: "leave", description: "Leave Pirate Day" },
+    { command: "crew", description: "Show the crew and the wall of shame" },
   ]);
 
   bot.command("join", buildJoin(services));
   bot.command("leave", buildLeave(services));
+  bot.command("crew", buildCrew(services));
 
   bot.on("message:text", async (ctx) => {
     const text = ctx.message.text;
@@ -118,6 +122,25 @@ async function main(): Promise<void> {
       }
       await ctx.reply(reply, {
         reply_parameters: { message_id: ctx.message.message_id },
+      });
+      // Append-only event log. Fire-and-forget: a failed sheet write
+      // shouldn't block the user-visible reply, but log it so we can
+      // see if the sheet is broken.
+      const kind: "spanish" | "correction" =
+        mode === "insult" ? "spanish" : "correction";
+      const eventBase = {
+        id: randomUUID(),
+        user_id: userId,
+        first_name: ctx.from?.first_name ?? `id${String(userId)}`,
+        kind,
+        fired_at: new Date().toISOString(),
+      };
+      const event =
+        username !== undefined && username.length > 0
+          ? { ...eventBase, username }
+          : eventBase;
+      services.events.upsert(event).catch((err: unknown) => {
+        console.error("los_piratas_bot: event log failed:", err);
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

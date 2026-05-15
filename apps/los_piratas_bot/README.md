@@ -11,6 +11,7 @@ Telegram bot that enforces "English Friday" in a Spanish-speaking group. On Frid
 Commands:
 - `/join` — enrol on Pirate Day. From now on, your Friday messages are watched.
 - `/leave` — opt out. Your past entries are kept in the sheet; the bot stops watching you.
+- `/crew` — list the active crew + two walls of shame (top 3 Spanish-speakers and top 3 corrected-most, all time). Tallied from the `piratas_events` log on the shared sheet.
 
 Group-wide cooldown of 30 seconds (configurable): the bot fires at most once every `COOLDOWN_SECONDS` regardless of who triggered it. Anti-spam by design — a single fire suppresses everyone for the window.
 
