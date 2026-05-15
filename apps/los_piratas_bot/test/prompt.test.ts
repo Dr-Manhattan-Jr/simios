@@ -49,23 +49,29 @@ describe("buildUserPrompt", () => {
       userMessage: "i has dog",
       username: "x",
     });
-    assert.ok(insult.toLowerCase().includes("insulto"));
-    assert.ok(correct.toLowerCase().includes("corrección"));
+    assert.ok(insult.toLowerCase().includes("insult"));
+    assert.ok(correct.toLowerCase().includes("correct"));
     assert.ok(correct.includes("SKIP"));
   });
 });
 
 describe("SYSTEM_PROMPT", () => {
-  it("instructs Spanish-only replies", () => {
-    assert.ok(SYSTEM_PROMPT.includes("español"));
+  it("instructs the bot to output in pirate spanglish (not pure English)", () => {
+    // The meta-prompt itself is in English now, but it must explicitly
+    // tell the model that OUTPUT is spanglish.
+    assert.ok(/spanglish/i.test(SYSTEM_PROMPT));
   });
   it("mentions Blas de Lezo by name", () => {
     assert.ok(SYSTEM_PROMPT.includes("Blas de Lezo"));
   });
-  it("forbids revealing it's an AI", () => {
-    assert.ok(SYSTEM_PROMPT.includes("IA") || SYSTEM_PROMPT.includes("bot"));
+  it("forbids revealing it's an AI/bot/Gemini", () => {
+    assert.ok(/AI/.test(SYSTEM_PROMPT) || /bot/.test(SYSTEM_PROMPT));
   });
   it("defines the SKIP sentinel for clean English", () => {
     assert.ok(SYSTEM_PROMPT.includes("SKIP"));
+  });
+  it("explicitly lists obvious typos as do-not-correct", () => {
+    // Regression test for the maretingk false-positive.
+    assert.ok(/maretingk|typo/i.test(SYSTEM_PROMPT));
   });
 });
