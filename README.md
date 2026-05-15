@@ -7,6 +7,7 @@ A small monorepo of personal Telegram bots and the shared bits they're built on.
 ### Bots
 
 - **[ciclobot](apps/ciclobot)** — tracks a small group's weekly 5×5 weightlifting numbers (bench, squat, deadlift; optionally clean-and-jerk and snatch) plus body weight, in a Google Sheet. Sunday-evening reminder for anyone who hasn't logged. See [apps/ciclobot/README.md](apps/ciclobot/README.md) for full setup.
+- **[los_piratas_bot](apps/los_piratas_bot)** — enforces "English Friday" in a Spanish-speaking Telegram group. Insults Spanish messages and corrects bad English in the voice of a drunken pirate under Don Blas de Lezo. Gemini 2.5 Flash for the persona. See [apps/los_piratas_bot/README.md](apps/los_piratas_bot/README.md) for full setup.
 
 More bots will land here over time, each as its own package under `apps/`.
 
