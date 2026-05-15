@@ -12,7 +12,7 @@ Commands:
 - `/join` — enrol on Pirate Day. From now on, your Friday messages are watched.
 - `/leave` — opt out. Your past entries are kept in the sheet; the bot stops watching you.
 
-Per-user cooldown of 30 seconds (configurable): each member has their own clock, so one chatty member doesn't suppress everyone else's mockery.
+Group-wide cooldown of 30 seconds (configurable): the bot fires at most once every `COOLDOWN_SECONDS` regardless of who triggered it. Anti-spam by design — a single fire suppresses everyone for the window.
 
 At Friday 00:00 local time the bot announces "Pirate Day begins!" in the configured group, and at Saturday 00:00 it announces the end.
 

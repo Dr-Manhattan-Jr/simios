@@ -2,44 +2,41 @@ import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 import { createCooldown } from "../src/domain/cooldown.js";
 
-const ALICE = 1;
-const BOB = 2;
-
-describe("createCooldown (per-user)", () => {
-  it("first call for a user always passes", () => {
+describe("createCooldown (group-wide)", () => {
+  it("first call always passes", () => {
     const cd = createCooldown(60_000);
-    assert.equal(cd.tryFire(ALICE, 1000), true);
+    assert.equal(cd.tryFire(1000), true);
   });
 
-  it("blocks subsequent calls for the same user within the window", () => {
+  it("blocks subsequent calls within the window", () => {
     const cd = createCooldown(60_000);
-    cd.tryFire(ALICE, 0);
-    assert.equal(cd.tryFire(ALICE, 1000), false);
-    assert.equal(cd.tryFire(ALICE, 30_000), false);
-    assert.equal(cd.tryFire(ALICE, 59_999), false);
+    cd.tryFire(0);
+    assert.equal(cd.tryFire(1000), false);
+    assert.equal(cd.tryFire(30_000), false);
+    assert.equal(cd.tryFire(59_999), false);
   });
 
-  it("re-opens for the same user exactly at the window boundary", () => {
+  it("re-opens exactly at the window boundary", () => {
     const cd = createCooldown(60_000);
-    cd.tryFire(ALICE, 0);
-    assert.equal(cd.tryFire(ALICE, 60_000), true);
+    cd.tryFire(0);
+    assert.equal(cd.tryFire(60_000), true);
   });
 
   it("records each successful fire as a new window start", () => {
     const cd = createCooldown(60_000);
-    assert.equal(cd.tryFire(ALICE, 0), true);
-    assert.equal(cd.tryFire(ALICE, 60_000), true);
-    assert.equal(cd.tryFire(ALICE, 60_500), false);
-    assert.equal(cd.tryFire(ALICE, 120_000), true);
+    assert.equal(cd.tryFire(0), true);
+    assert.equal(cd.tryFire(60_000), true);
+    assert.equal(cd.tryFire(60_500), false);
+    assert.equal(cd.tryFire(120_000), true);
   });
 
-  it("does not suppress one user's window because another fired", () => {
+  it("one fire suppresses every subsequent caller within the window", () => {
+    // This is the explicit anti-spam behavior. Different users can't
+    // burst-trigger the bot just by all chatting at once.
     const cd = createCooldown(60_000);
-    assert.equal(cd.tryFire(ALICE, 0), true);
-    // Bob hasn't fired before; his first call should pass even though
-    // Alice just fired.
-    assert.equal(cd.tryFire(BOB, 1), true);
-    // But Alice is still locked out.
-    assert.equal(cd.tryFire(ALICE, 1), false);
+    assert.equal(cd.tryFire(0), true);
+    assert.equal(cd.tryFire(1), false);
+    assert.equal(cd.tryFire(2), false);
+    assert.equal(cd.tryFire(59_999), false);
   });
 });

@@ -75,7 +75,7 @@ async function main(): Promise<void> {
     const mode = modeForLanguage(language);
     if (mode === undefined) return;
 
-    if (!cooldown.tryFire(userId, Date.now())) return;
+    if (!cooldown.tryFire(Date.now())) return;
 
     const username = ctx.from?.username;
     const userPrompt = buildUserPrompt({
