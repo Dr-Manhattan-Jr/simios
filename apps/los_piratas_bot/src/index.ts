@@ -4,7 +4,9 @@ import {
   startHealthServer,
 } from "@simios/telegram-kit";
 import { Bot } from "grammy";
+import cron from "node-cron";
 import { loadConfig } from "./config.js";
+import { FRIDAY_END, FRIDAY_START } from "./domain/announcements.js";
 import { createCooldown } from "./domain/cooldown.js";
 import { isFriday } from "./domain/day.js";
 import { detectLanguage } from "./domain/language.js";
@@ -47,7 +49,11 @@ async function main(): Promise<void> {
     // even on Friday — they're for other bots in the group.
     if (text.trim().startsWith("/")) return;
 
-    if (!cooldown.tryFire(Date.now())) return;
+    // Anonymous channel posts have no `from`. Skip them — we have no way to
+    // address the speaker, and our cooldown is per-user.
+    const userId = ctx.from?.id;
+    if (userId === undefined) return;
+    if (!cooldown.tryFire(userId, Date.now())) return;
 
     const username = ctx.from?.username;
     const userPrompt = buildUserPrompt({
@@ -82,6 +88,29 @@ async function main(): Promise<void> {
   bot.catch((err) => {
     console.error("Bot error:", err);
   });
+
+  // Friday boundary announcements. node-cron pins them to wall-clock time
+  // in the configured timezone, so they fire reliably regardless of when
+  // the container restarted. The container needs to be alive at midnight
+  // — Railway keeps long-poll workers running, so this is fine.
+  cron.schedule(
+    "0 0 * * 5",
+    () => {
+      bot.api.sendMessage(config.chatId, FRIDAY_START).catch((err: unknown) => {
+        console.error("los_piratas_bot: friday start announcement failed:", err);
+      });
+    },
+    { timezone: config.timeZone },
+  );
+  cron.schedule(
+    "0 0 * * 6",
+    () => {
+      bot.api.sendMessage(config.chatId, FRIDAY_END).catch((err: unknown) => {
+        console.error("los_piratas_bot: friday end announcement failed:", err);
+      });
+    },
+    { timezone: config.timeZone },
+  );
 
   let healthy = false;
   startHealthServer({ isHealthy: () => healthy });

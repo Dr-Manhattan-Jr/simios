@@ -6,7 +6,9 @@ Telegram bot that enforces "English Friday" in a Spanish-speaking group. On Frid
 - **corrects bad English** in character ("listen, you scurvy dog — it's *I have been* not *I have being*");
 - **stays silent on weekdays** and **stays silent on good English**, so it isn't a nuisance.
 
-Group-wide cooldown of 30 seconds (configurable): the bot fires at most once every `COOLDOWN_SECONDS` regardless of who triggered it.
+Per-user cooldown of 30 seconds (configurable): each member has their own clock, so one chatty user doesn't suppress everyone else's mockery.
+
+At Friday 00:00 local time the bot announces "Pirate Day begins!" in the configured group, and at Saturday 00:00 it announces the end.
 
 ## How it decides
 

@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { detectLanguage } from "../src/domain/language.js";
 
 describe("detectLanguage", () => {
-  it("returns es for clearly Spanish text", () => {
+  it("returns es for clearly Spanish text (≥7 words)", () => {
     assert.equal(
       detectLanguage("Hola tripulación, ¿qué tal el día en alta mar?"),
       "es",
@@ -14,7 +14,16 @@ describe("detectLanguage", () => {
     );
   });
 
-  it("returns en for clearly English text", () => {
+  it("returns es for short-but-confident Spanish (3–6 words, high accuracy)", () => {
+    // These are the cases from the user's "all of these should have
+    // triggered" complaint. They're short but unambiguously Spanish; the
+    // asymmetric threshold lets them through.
+    assert.equal(detectLanguage("Esperando la comida"), "es");
+    assert.equal(detectLanguage("Ahora comidita, despedida y para casa"), "es");
+    assert.equal(detectLanguage("Vidal en el buffet de sushi"), "es");
+  });
+
+  it("returns en for clearly English text (≥7 words)", () => {
     assert.equal(
       detectLanguage("Hello crew, how is everyone doing today on the seas"),
       "en",
@@ -25,27 +34,31 @@ describe("detectLanguage", () => {
     );
   });
 
-  it("returns other for fewer than 7 words (regardless of content)", () => {
+  it("returns other for English shorter than 7 words", () => {
+    // Keep the higher bar on English — a false correction is annoying.
+    assert.equal(detectLanguage("how are you doing today friend"), "other");
     assert.equal(detectLanguage("ok"), "other");
     assert.equal(detectLanguage("👍"), "other");
     assert.equal(detectLanguage("yes"), "other");
-    assert.equal(detectLanguage("hola que tal todo bien"), "other");
-    assert.equal(detectLanguage("how are you doing today friend"), "other");
   });
 
   it("returns other for unknown / non-target languages", () => {
     // German.
-    assert.equal(detectLanguage("Guten Tag, ich heisse Hans und komme aus Hamburg"), "other");
-  });
-
-  it("returns other for borderline short English with foreign filler words", () => {
-    // The original bug: "so, claude will replace us aham" — 6 words but the
-    // foreign interjection "aham" plus the name throws tinyld off enough
-    // that the top guess is below the confidence floor, OR the top guess
-    // isn't en/es at all. Either way we want "other", not a wrong trigger.
     assert.equal(
-      detectLanguage("so, claude will replace us aham"),
+      detectLanguage("Guten Tag, ich heisse Hans und komme aus Hamburg"),
       "other",
     );
+  });
+
+  it("returns other for short English with foreign filler words", () => {
+    // The original regression case: 6 words including a foreign
+    // interjection. Below the EN 7-word floor, so silent.
+    assert.equal(detectLanguage("so, claude will replace us aham"), "other");
+  });
+
+  it("returns other for Spanish shorter than 3 words", () => {
+    // Even short Spanish has a floor — "hola" alone isn't enough.
+    assert.equal(detectLanguage("hola"), "other");
+    assert.equal(detectLanguage("hola amigo"), "other");
   });
 });

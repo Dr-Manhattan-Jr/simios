@@ -1,21 +1,19 @@
 /**
- * Group-wide cooldown gate. The bot fires at most once every `windowMs`
- * milliseconds, regardless of who triggered it. Calling `tryFire(now)`
- * returns true if the gate is open AND records the firing; subsequent
- * calls within the window return false.
+ * Per-user cooldown gate. Each user has their own clock — one user's
+ * trigger doesn't suppress others. Within a single user's window the
+ * gate stays closed.
  */
 export interface Cooldown {
-  tryFire(now: number): boolean;
+  tryFire(userId: number, now: number): boolean;
 }
 
 export function createCooldown(windowMs: number): Cooldown {
-  // Use Number.NEGATIVE_INFINITY so the first call always passes regardless
-  // of the absolute timestamp the caller chooses (epoch millis, ticks, …).
-  let lastFiredAt = Number.NEGATIVE_INFINITY;
+  const lastFiredByUser = new Map<number, number>();
   return {
-    tryFire(now) {
-      if (now - lastFiredAt < windowMs) return false;
-      lastFiredAt = now;
+    tryFire(userId, now) {
+      const last = lastFiredByUser.get(userId);
+      if (last !== undefined && now - last < windowMs) return false;
+      lastFiredByUser.set(userId, now);
       return true;
     },
   };

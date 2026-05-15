@@ -2,33 +2,50 @@ import { detectAll } from "tinyld";
 
 export type Language = "es" | "en" | "other";
 
-const MIN_WORDS = 7;
-const MIN_CONFIDENCE = 0.5;
+// Asymmetric word-count thresholds. False positives feel worse on English
+// (correcting fine English is annoying) than on Spanish (an erroneous
+// pirate insult lands less awkwardly), so the bar is lower for Spanish.
+const ES_MIN_WORDS = 3;
+const EN_MIN_WORDS = 7;
 
 /**
  * Detect whether a message is Spanish, English, or something else.
  *
- * Returns "other" (and the bot stays silent) when:
- *   - the message is too short for reliable detection (< 7 words), OR
- *   - the top language is something other than es/en, OR
- *   - the top language IS es/en but tinyld's confidence is < 0.5.
+ * tinyld's `accuracy` field turns out to be near-useless for short
+ * messages — even clearly Spanish 3–6-word strings score 0.05–0.15.
+ * So we don't gate on confidence; we use:
  *
- * The confidence floor exists because short messages with foreign words
- * (e.g. "so, claude will replace us aham") used to misclassify as
- * Spanish and trigger the bot incorrectly. Better to stay silent on
- * borderline calls than to insult a hispanophone speaking decent
- * English.
+ *   1. Word count — asymmetric floors per language (above).
+ *   2. Top-2 inspection — short Spanish often mis-classifies as
+ *      Portuguese because they share so many n-grams. If pt is top
+ *      and es is a close second, treat as es.
+ *
+ * The bot stays silent when the message is too short or the top
+ * language isn't a target.
  */
 export function detectLanguage(text: string): Language {
   const trimmed = text.trim();
   const wordCount = trimmed.split(/\s+/).filter((w) => w.length > 0).length;
-  if (wordCount < MIN_WORDS) return "other";
 
   const ranked = detectAll(trimmed);
   const top = ranked[0];
   if (top === undefined) return "other";
-  if (top.accuracy < MIN_CONFIDENCE) return "other";
-  if (top.lang === "es") return "es";
-  if (top.lang === "en") return "en";
+
+  // Spanish path: top is es, OR top is pt and es is a close second
+  // (relative gap < 50%, meaning es scored at least half as well as pt).
+  const second = ranked[1];
+  const isSpanish =
+    top.lang === "es" ||
+    (top.lang === "pt" &&
+      second?.lang === "es" &&
+      second.accuracy >= top.accuracy * 0.5);
+  if (isSpanish) {
+    return wordCount >= ES_MIN_WORDS ? "es" : "other";
+  }
+
+  if (top.lang === "en") {
+    return wordCount >= EN_MIN_WORDS ? "en" : "other";
+  }
+
   return "other";
 }

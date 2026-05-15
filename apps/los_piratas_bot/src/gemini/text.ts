@@ -37,7 +37,14 @@ export function createGeminiTextClient(params: {
           contents: [{ role: "user", parts: [{ text: user }] }],
           generationConfig: {
             temperature: 1.0,
-            maxOutputTokens: 400,
+            maxOutputTokens: 1000,
+            // Gemini 2.5 Flash uses internal "thinking" tokens for chain-of-
+            // thought reasoning, charged against the same maxOutputTokens
+            // budget. For a persona bot there's nothing to think about — the
+            // model just needs to generate a one-liner. With thinking on
+            // (default), 400 tokens would be spent reasoning silently and
+            // the visible reply truncated at the first few words. Disable.
+            thinkingConfig: { thinkingBudget: 0 },
           },
           // The persona is a vulgar drunk pirate — Gemini's default safety
           // filters will truncate or refuse. Set the four categories to
