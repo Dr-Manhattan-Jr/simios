@@ -7,7 +7,8 @@ A small monorepo of personal Telegram bots and the shared bits they're built on.
 ### Bots
 
 - **[ciclobot](apps/ciclobot)** — tracks a small group's weekly 5×5 weightlifting numbers (bench, squat, deadlift; optionally clean-and-jerk and snatch) plus body weight, in a Google Sheet. Sunday-evening reminder for anyone who hasn't logged. See [apps/ciclobot/README.md](apps/ciclobot/README.md) for full setup.
-- **[los_piratas_bot](apps/los_piratas_bot)** — enforces "English Friday" in a Spanish-speaking Telegram group. Insults Spanish messages and corrects bad English in the voice of a drunken pirate under Don Blas de Lezo. Gemini 2.5 Flash for the persona. See [apps/los_piratas_bot/README.md](apps/los_piratas_bot/README.md) for full setup.
+- **[tractorbot](apps/tractorbot)** — listens to a group chat and, whenever someone says `claude` or `claudio`, replies with a freshly Gemini-generated image of a monkey driving a tractor. Each prompt randomises style, tractor, setting, and quirks; trailing text in the trigger message becomes a hint to the model. See [apps/tractorbot/README.md](apps/tractorbot/README.md) for full setup.
+- **[los_piratas_bot](apps/los_piratas_bot)** — enforces "English Friday" in a Spanish-speaking Telegram group. Opt-in via `/join`. Insults Spanish messages from joined members on Fridays and corrects bad English, in the voice of a drunken pirate under Don Blas de Lezo. Stores its member list in a tab on ciclobot's spreadsheet; Gemini 2.5 Flash for the persona. See [apps/los_piratas_bot/README.md](apps/los_piratas_bot/README.md) for full setup.
 
 More bots will land here over time, each as its own package under `apps/`.
 
@@ -22,6 +23,8 @@ More bots will land here over time, each as its own package under `apps/`.
 Mostly me, and a handful of friends. If you want to:
 
 - run your own weightlifting group tracker → fork the repo, follow [apps/ciclobot/README.md](apps/ciclobot/README.md).
+- run a Telegram bot that turns trigger words into AI-generated images → [apps/tractorbot/README.md](apps/tractorbot/README.md).
+- enforce English-only days (or Spanish-only, or any other rule) in a group chat with an opt-in persona bot → [apps/los_piratas_bot/README.md](apps/los_piratas_bot/README.md).
 - build your own Telegram bot in TypeScript → the `packages/*` libs and the project setup (pnpm workspaces + strict TS + zod schemas as source of truth) are a reasonable starting template.
 
 ## Conventions
