@@ -11,6 +11,7 @@ import { loadConfig } from "./config.js";
 import { FRIDAY_END, FRIDAY_START } from "./domain/announcements.js";
 import { createCooldown } from "./domain/cooldown.js";
 import { isFriday } from "./domain/day.js";
+import { createDedup } from "./domain/dedup.js";
 import { detectLanguage } from "./domain/language.js";
 import {
   SYSTEM_PROMPT,
@@ -38,6 +39,9 @@ async function main(): Promise<void> {
     model: config.geminiModel,
   });
   const cooldown = createCooldown(config.cooldownSeconds * 1000);
+  // 200 ids is plenty: even bursty Friday chat is way under that, and the
+  // ring is per-container so cross-container dedup isn't its job.
+  const dedup = createDedup(200);
 
   const bot = new Bot(config.botToken);
   bot.use(onlyChat(config.chatId));
@@ -54,6 +58,15 @@ async function main(): Promise<void> {
     const text = ctx.message.text;
     // The bot's own messages never re-enter this handler (Telegram doesn't
     // deliver them as updates), so no self-loop guard is needed.
+
+    // Dedup against re-delivery (grammY retry, deploy overlap, etc).
+    // Telegram message_id is per-chat unique and monotonic.
+    if (!dedup.acceptOnce(ctx.message.message_id)) {
+      console.log(
+        `los_piratas_bot: duplicate message ${String(ctx.message.message_id)}, skipping`,
+      );
+      return;
+    }
 
     // Bare commands like /help or /join are routed by grammY's command()
     // matchers above (or for unknown commands, ignored). Don't treat them
@@ -91,6 +104,11 @@ async function main(): Promise<void> {
       const reply = await gemini.generate({
         system: SYSTEM_PROMPT,
         user: userPrompt,
+        // Correction mode is factual and benefits from low creativity —
+        // the model should only report errors it's confident about, not
+        // invent ones. Insult mode wants maximum variety, hence the
+        // high default temperature.
+        temperature: mode === "correct" ? 0.3 : 1.0,
       });
       // Honor the "SKIP" sentinel from the system prompt: good English
       // doesn't deserve a reply.

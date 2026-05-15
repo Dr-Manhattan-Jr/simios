@@ -14,7 +14,12 @@ const ResponseSchema = z.object({
 });
 
 export interface GeminiTextClient {
-  generate(args: { system: string; user: string }): Promise<string>;
+  generate(args: {
+    system: string;
+    user: string;
+    /** Sampling temperature. Defaults to 1.0 (free-spirited persona). */
+    temperature?: number;
+  }): Promise<string>;
 }
 
 export function createGeminiTextClient(params: {
@@ -25,7 +30,7 @@ export function createGeminiTextClient(params: {
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `${encodeURIComponent(params.model)}:generateContent`;
   return {
-    async generate({ system, user }) {
+    async generate({ system, user, temperature }) {
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -36,7 +41,7 @@ export function createGeminiTextClient(params: {
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: [{ text: user }] }],
           generationConfig: {
-            temperature: 1.0,
+            temperature: temperature ?? 1.0,
             maxOutputTokens: 1000,
             // Gemini 2.5 Flash uses internal "thinking" tokens for chain-of-
             // thought reasoning, charged against the same maxOutputTokens

@@ -8,3 +8,10 @@ restartPolicyMaxRetries = 10
 healthcheckPath = "/health"
 healthcheckTimeout = 60
 overlapSeconds = 0
+# Force the old container to die immediately on a new deploy. Without
+# this, Railway gives the old container ~30s to drain — during which
+# both containers poll Telegram and double-deliver. We can't avoid this
+# at the Telegram protocol level, so we just shrink the overlap window
+# to ~0 here and rely on the in-process dedup ring for whatever slips
+# through.
+drainingSeconds = 0
