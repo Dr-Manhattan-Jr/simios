@@ -35,9 +35,20 @@ export function createGeminiTextClient(params: {
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: [{ text: user }] }],
           generationConfig: {
-            temperature: 0.9,
-            maxOutputTokens: 200,
+            temperature: 1.0,
+            maxOutputTokens: 400,
           },
+          // The persona is a vulgar drunk pirate — Gemini's default safety
+          // filters will truncate or refuse. Set the four categories to
+          // BLOCK_NONE so the model can deliver the bilingual cursing the
+          // persona is built around. This is a closed group of friends,
+          // adults only, opt-in via /join — appropriate context.
+          safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+          ],
         }),
       });
       if (!response.ok) {
