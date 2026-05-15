@@ -6,7 +6,13 @@ Telegram bot that enforces "English Friday" in a Spanish-speaking group. On Frid
 - **corrects bad English** in character ("listen, you scurvy dog — it's *I have been* not *I have being*");
 - **stays silent on weekdays** and **stays silent on good English**, so it isn't a nuisance.
 
-Per-user cooldown of 30 seconds (configurable): each member has their own clock, so one chatty user doesn't suppress everyone else's mockery.
+**Opt-in via `/join`.** Only members who have explicitly joined (saved on a `piratas_members` tab of the shared ciclobot spreadsheet) get watched. Everyone else can chat freely without being insulted.
+
+Commands:
+- `/join` — enrol on Pirate Day. From now on, your Friday messages are watched.
+- `/leave` — opt out. Your past entries are kept in the sheet; the bot stops watching you.
+
+Per-user cooldown of 30 seconds (configurable): each member has their own clock, so one chatty member doesn't suppress everyone else's mockery.
 
 At Friday 00:00 local time the bot announces "Pirate Day begins!" in the configured group, and at Saturday 00:00 it announces the end.
 
@@ -30,6 +36,8 @@ At Friday 00:00 local time the bot announces "Pirate Day begins!" in the configu
    - `BOT_TOKEN` — from BotFather.
    - `CHAT_ID` — the negative chat ID (supergroups need the `-100` prefix).
    - `GEMINI_API_KEY` — from AI Studio.
+   - `SHEET_ID` — the **same** Google Sheet as ciclobot (los_piratas_bot creates a `piratas_members` tab there).
+   - `GOOGLE_SERVICE_ACCOUNT_JSON` — the **same** service account JSON as ciclobot. Reusing it means no extra Google Cloud setup; just paste the full JSON.
    - `GEMINI_MODEL` — defaults to `gemini-2.5-flash`. Override if you want.
    - `TZ` — defaults to `Europe/Madrid`.
    - `COOLDOWN_SECONDS` — defaults to `30`.

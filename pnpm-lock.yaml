@@ -66,6 +66,9 @@ importers:
       '@simios/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@simios/sheets-client':
+        specifier: workspace:*
+        version: link:../../packages/sheets-client
       '@simios/telegram-kit':
         specifier: workspace:*
         version: link:../../packages/telegram-kit

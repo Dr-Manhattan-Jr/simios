@@ -5,6 +5,8 @@ import {
 } from "@simios/telegram-kit";
 import { Bot } from "grammy";
 import cron from "node-cron";
+import { buildJoin } from "./commands/join.js";
+import { buildLeave } from "./commands/leave.js";
 import { loadConfig } from "./config.js";
 import { FRIDAY_END, FRIDAY_START } from "./domain/announcements.js";
 import { createCooldown } from "./domain/cooldown.js";
@@ -16,6 +18,7 @@ import {
   modeForLanguage,
 } from "./domain/prompt.js";
 import { createGeminiTextClient } from "./gemini/text.js";
+import { createServices } from "./services.js";
 
 async function main(): Promise<void> {
   console.log("los_piratas_bot: validating environment…");
@@ -23,6 +26,11 @@ async function main(): Promise<void> {
   console.log(
     `los_piratas_bot: environment OK (chat ${String(config.chatId)}, ` +
       `tz ${config.timeZone}, cooldown ${String(config.cooldownSeconds)}s)`,
+  );
+
+  const services = await createServices(config);
+  console.log(
+    `los_piratas_bot: members loaded (${String(services.memberCache.size())} active)`,
   );
 
   const gemini = createGeminiTextClient({
@@ -34,10 +42,32 @@ async function main(): Promise<void> {
   const bot = new Bot(config.botToken);
   bot.use(onlyChat(config.chatId));
 
+  await bot.api.setMyCommands([
+    { command: "join", description: "Join Pirate Day (only joined members are watched)" },
+    { command: "leave", description: "Leave Pirate Day" },
+  ]);
+
+  bot.command("join", buildJoin(services));
+  bot.command("leave", buildLeave(services));
+
   bot.on("message:text", async (ctx) => {
     const text = ctx.message.text;
     // The bot's own messages never re-enter this handler (Telegram doesn't
     // deliver them as updates), so no self-loop guard is needed.
+
+    // Bare commands like /help or /join are routed by grammY's command()
+    // matchers above (or for unknown commands, ignored). Don't treat them
+    // as natural-language to react to.
+    if (text.trim().startsWith("/")) return;
+
+    // Anonymous channel posts have no `from`. Skip them — we have no way to
+    // address the speaker, and our cooldown is per-user.
+    const userId = ctx.from?.id;
+    if (userId === undefined) return;
+
+    // Opt-in gate: only joined members get watched. Non-members chat
+    // freely without being insulted.
+    if (!services.memberCache.has(userId)) return;
 
     if (!isFriday(new Date(), config.timeZone)) return;
 
@@ -45,14 +75,6 @@ async function main(): Promise<void> {
     const mode = modeForLanguage(language);
     if (mode === undefined) return;
 
-    // Bare commands like /help or /weight shouldn't be reinterpreted by us
-    // even on Friday — they're for other bots in the group.
-    if (text.trim().startsWith("/")) return;
-
-    // Anonymous channel posts have no `from`. Skip them — we have no way to
-    // address the speaker, and our cooldown is per-user.
-    const userId = ctx.from?.id;
-    if (userId === undefined) return;
     if (!cooldown.tryFire(userId, Date.now())) return;
 
     const username = ctx.from?.username;
