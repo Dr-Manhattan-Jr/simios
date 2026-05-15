@@ -7,7 +7,7 @@ const RawEnvSchema = z.object({
   GEMINI_API_KEY: NonEmptyString,
   GEMINI_MODEL: NonEmptyString.default("gemini-2.5-flash"),
   TZ: NonEmptyString.default("Europe/Madrid"),
-  COOLDOWN_SECONDS: z.coerce.number().int().min(0).default(60),
+  COOLDOWN_SECONDS: z.coerce.number().int().min(0).default(20),
 });
 
 const ConfigSchema = RawEnvSchema.transform((raw) => ({

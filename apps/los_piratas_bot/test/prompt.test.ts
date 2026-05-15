@@ -38,7 +38,7 @@ describe("buildUserPrompt", () => {
     assert.ok(p.includes("un grumete"));
   });
 
-  it("includes the right verb hint for each mode", () => {
+  it("includes the right intent for each mode", () => {
     const insult = buildUserPrompt({
       mode: "insult",
       userMessage: "hola",
@@ -49,8 +49,9 @@ describe("buildUserPrompt", () => {
       userMessage: "i has dog",
       username: "x",
     });
-    assert.ok(insult.toLowerCase().includes("insúltale"));
-    assert.ok(correct.toLowerCase().includes("corrígele"));
+    assert.ok(insult.toLowerCase().includes("insulto"));
+    assert.ok(correct.toLowerCase().includes("corrección"));
+    assert.ok(correct.includes("SKIP"));
   });
 });
 

@@ -44,9 +44,17 @@ export function buildUserPrompt(ctx: TriggerContext): string {
       ? `@${ctx.username}`
       : "un grumete";
   if (ctx.mode === "insult") {
-    return `El marinero ${who} acaba de hablar en español un viernes. Mensaje original: """${ctx.userMessage}""". Insúltale.`;
+    return (
+      `El marinero ${who} ha hablado en español un viernes. ` +
+      `Su mensaje fue: ${ctx.userMessage}\n\n` +
+      `Responde directamente con tu insulto (en spanglish). No repitas su mensaje, no lo cites entre comillas, no expliques. Solo el insulto, frases completas.`
+    );
   }
-  return `El marinero ${who} ha escrito en inglés pero con errores. Mensaje original: """${ctx.userMessage}""". Burlate y corrígele.`;
+  return (
+    `El marinero ${who} ha escrito en inglés. ` +
+    `Su mensaje fue: ${ctx.userMessage}\n\n` +
+    `Si el inglés es correcto, responde EXACTAMENTE "SKIP". Si tiene errores, burlate y dale la corrección directamente. No repitas su mensaje entero, no lo cites entre comillas, no expliques. Solo tu respuesta, frases completas.`
+  );
 }
 
 export function modeForLanguage(language: Language): TriggerContext["mode"] | undefined {
