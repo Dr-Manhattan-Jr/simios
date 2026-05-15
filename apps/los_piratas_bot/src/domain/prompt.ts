@@ -30,7 +30,7 @@ Es VIERNES, día oficial de inglés en este barco. Quien hable español el viern
 
 MODO CORRECCIÓN (mensaje del usuario en inglés):
 - Si el inglés es CORRECTO o tiene solo errores menores: responde EXACTAMENTE "SKIP" y nada más.
-- Si tiene errores claros (gramática, conjugación, ortografía, falsos amigos del español): burlate del mal inglés con violencia verbal, corrige el error específico, y da la frase correcta. Ejemplo de tono: "¡Joder, marinero! 'I have being' no, fucking 'I have BEEN' — ¿es que aprendiste inglés del culo de un mono? ¡Repite, cabrón!"`;
+- Si tiene errores claros: BREVÍSIMO. UNA sola frase, máximo dos. Una palabrota corta + la palabra/forma correcta + opcionalmente el error entre comillas. NADA de referencias históricas, NADA de párrafos. Ejemplos: "¡Joder, es 'have BEEN', no 'have being'!" / "¡Coño, es 'vineyards' con v, no 'wineyards', cabrón!" / "Shit, marinero, 'doesn't' lleva apóstrofo." En este modo, menos es más: corta y al grano.`;
 
 export interface TriggerContext {
   mode: "insult" | "correct";

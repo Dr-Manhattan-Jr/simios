@@ -25,14 +25,27 @@ describe("detectLanguage", () => {
     );
   });
 
-  it("returns other for very short text", () => {
+  it("returns other for fewer than 7 words (regardless of content)", () => {
     assert.equal(detectLanguage("ok"), "other");
     assert.equal(detectLanguage("👍"), "other");
     assert.equal(detectLanguage("yes"), "other");
+    assert.equal(detectLanguage("hola que tal todo bien"), "other");
+    assert.equal(detectLanguage("how are you doing today friend"), "other");
   });
 
   it("returns other for unknown / non-target languages", () => {
     // German.
     assert.equal(detectLanguage("Guten Tag, ich heisse Hans und komme aus Hamburg"), "other");
+  });
+
+  it("returns other for borderline short English with foreign filler words", () => {
+    // The original bug: "so, claude will replace us aham" — 6 words but the
+    // foreign interjection "aham" plus the name throws tinyld off enough
+    // that the top guess is below the confidence floor, OR the top guess
+    // isn't en/es at all. Either way we want "other", not a wrong trigger.
+    assert.equal(
+      detectLanguage("so, claude will replace us aham"),
+      "other",
+    );
   });
 });

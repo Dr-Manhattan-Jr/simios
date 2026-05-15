@@ -6,7 +6,7 @@ Telegram bot that enforces "English Friday" in a Spanish-speaking group. On Frid
 - **corrects bad English** in character ("listen, you scurvy dog — it's *I have been* not *I have being*");
 - **stays silent on weekdays** and **stays silent on good English**, so it isn't a nuisance.
 
-Group-wide cooldown of 20 seconds (configurable): the bot fires at most once every `COOLDOWN_SECONDS` regardless of who triggered it.
+Group-wide cooldown of 30 seconds (configurable): the bot fires at most once every `COOLDOWN_SECONDS` regardless of who triggered it.
 
 ## How it decides
 
@@ -30,7 +30,7 @@ Group-wide cooldown of 20 seconds (configurable): the bot fires at most once eve
    - `GEMINI_API_KEY` — from AI Studio.
    - `GEMINI_MODEL` — defaults to `gemini-2.5-flash`. Override if you want.
    - `TZ` — defaults to `Europe/Madrid`.
-   - `COOLDOWN_SECONDS` — defaults to `20`.
+   - `COOLDOWN_SECONDS` — defaults to `30`.
 6. **Deploy.** Railway picks up `apps/los_piratas_bot/railway.toml`; build = Dockerfile; healthcheck = `/health`.
 
 ## Local development
