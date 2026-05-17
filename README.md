@@ -14,9 +14,9 @@ More bots will land here over time, each as its own package under `apps/`.
 
 ### Shared packages
 
-- **[@simios/env](packages/env)** — zod-based env parsing helpers.
-- **[@simios/sheets-client](packages/sheets-client)** — thin googleapis wrapper for service-account-authenticated Google Sheets I/O.
-- **[@simios/telegram-kit](packages/telegram-kit)** — grammY bootstrap helpers shared by all bots (single-group chat guard, user parsing, mention formatting).
+- **[@simios/env](packages/env)** — zod-based env parsing helpers (`NonEmptyString`, `JsonObject`, `parseEnv`).
+- **[@simios/sheets-client](packages/sheets-client)** — googleapis wrapper for service-account-authenticated Google Sheets I/O, plus a `defineTable` factory so each bot's sheet tab is one tiny file.
+- **[@simios/telegram-kit](packages/telegram-kit)** — grammY bootstrap helpers shared by all bots: single-group chat guard, user parsing, mention formatting, long-poll retry on Telegram 409s, and an HTTP healthcheck server for Railway.
 
 ## Who this is for
 
@@ -29,10 +29,12 @@ Mostly me, and a handful of friends. If you want to:
 
 ## Conventions
 
+- **Node 24** (current LTS). Pinned in `package.json` engines and both Dockerfiles' base image.
 - **TypeScript strict mode** with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
 - **Zod is the source of truth for every data shape.** TS types are derived via `z.infer`. No `as`, no `!`, no `any` — enforced by `eslint`.
 - **pnpm workspaces.** Each app and each shared package has its own `package.json` and `tsconfig.json` extending `tsconfig.base.json`.
 - **One Dockerfile per app**, living alongside the app's source (e.g. `apps/ciclobot/Dockerfile`). Build context is always the repo root so the Dockerfile can pull in shared `packages/*` and the workspace lockfile.
+- **One `railway.toml` per app** under `apps/<bot>/railway.toml`. Railway needs each service's "Config Path" set to that path; otherwise Railway falls back to default detection and ignores the toml.
 
 ## Develop
 
@@ -40,8 +42,16 @@ Mostly me, and a handful of friends. If you want to:
 pnpm install
 pnpm typecheck   # all packages
 pnpm lint
-pnpm -F ciclobot dev   # run a specific app with watch
+pnpm test
+pnpm -F ciclobot dev          # run a specific app with watch
+# also: pnpm -F tractorbot dev, pnpm -F los_piratas_bot dev
 ```
+
+Each bot's `dev` script uses `tsx watch` and fails fast on missing env vars — see the app's README for the required env.
+
+## Deploy
+
+Push to `main`. Railway watches the GitHub repo and rebuilds the Dockerfile of every affected app. No CLI deploy step. After a push, `railway logs --service <name>` (e.g. `ciclobot`, `tractorbot`, or the los_piratas_bot service ID — see its README) confirms the rollout.
 
 ## License
 

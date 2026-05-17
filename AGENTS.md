@@ -11,8 +11,8 @@ These are non-negotiable. Every change must pass each one. Flag and fix in the s
 1. **Strict TypeScript end-to-end.** `tsconfig.base.json` enables `strict`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes`. Don't relax any of these.
 2. **Zod schemas are the source of truth for every shape.** TS types are derived via `z.infer<typeof Schema>`. Never hand-write an interface that duplicates a schema.
 3. **No `as`, no `!`, no `any`** in source. Enforced by ESLint. The only legitimate `as` is `as const`. Use zod parsing, type guards, or `satisfies` instead.
-4. **One command per file** under `apps/ciclobot/src/commands/`. Don't bundle multiple commands together.
-5. **One sheet tab per file** under `apps/ciclobot/src/sheets/`. Each exports a `createTable(...)` built on `defineTable` from `@simios/sheets-client`.
+4. **One command per file** under `apps/<bot>/src/commands/` (applies to every bot). Don't bundle multiple commands together.
+5. **One sheet tab per file** under `apps/<bot>/src/sheets/`. Each exports a `createTable(...)` built on `defineTable` from `@simios/sheets-client`.
 6. **No re-exports.** A module never re-exports a symbol it doesn't define. Even one `export { X } from "./other"` is a violation unless it's a package's main `index.ts` aggregating its public API.
 7. **Shared packages stay app-agnostic.** `@simios/env`, `@simios/sheets-client`, `@simios/telegram-kit` must not import from any `apps/*` package.
 8. **Domain → Sheets dependency is one-way.** `src/domain/*` defines schemas; `src/sheets/*` imports them. The reverse is forbidden.

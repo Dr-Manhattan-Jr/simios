@@ -23,15 +23,17 @@ These are non-negotiable in this repo, enforced by ESLint:
 - An external boundary that doesn't parse through a schema: env vars, Telegram updates, Google Sheets rows, JSON env blobs. Every one of these must `.parse()` (or `.safeParse()`) before its value flows into business logic.
 - `unknown` leaking past a parsing boundary. Once parsed, the value is trusted.
 
-### 3. Per-app rules
+### 3. Per-app rules (apply to every `apps/<bot>/`)
 
-When `apps/ciclobot/` changes:
+The monorepo currently hosts three bots: `ciclobot` (weightlifting tracker, sheets-backed), `tractorbot` (trigger-word image generation), `los_piratas_bot` (English-Friday persona). The rules below apply to all three and to any future bot.
 
-- **One command per file** under `apps/ciclobot/src/commands/` (`log.ts`, `weight.ts`, ...). Don't bundle multiple commands into one file.
-- **One sheet tab per file** under `apps/ciclobot/src/sheets/` (`participants.ts`, `log.ts`, `bodyweight.ts`). Each file defines a `createTable(...)` factory using `defineTable` from `@simios/sheets-client`. Don't hand-roll the `listAll`/`upsert`/`removeByKey` shapes — use `defineTable`.
+- **One command per file** under `apps/<bot>/src/commands/` (`log.ts`, `weight.ts`, `join.ts`, `crew.ts`, …). Don't bundle multiple commands into one file.
+- **One sheet tab per file** under `apps/<bot>/src/sheets/`. Each file defines a `createTable(...)` factory using `defineTable` from `@simios/sheets-client`. Don't hand-roll the `listAll`/`upsert`/`removeByKey` shapes.
 - **Domain schemas live in `src/domain/`.** Sheet files import schemas from there; the reverse is forbidden (no `domain/*` importing `sheets/*`).
 - **Commands receive `services: Services` from a factory** (e.g. `buildLog(services)`). They never instantiate their own sheet clients.
 - **Bot is locked to `CHAT_ID`** via `onlyChat()` middleware (already wired in `index.ts`). Any new "respond to anyone" pattern should be flagged.
+- **Use `startBotWith409Retry` + `startHealthServer`** from `@simios/telegram-kit` in every bot's bootstrap. Don't reinvent.
+- **Per-bot Railway config:** every app has its own `apps/<bot>/Dockerfile` AND `apps/<bot>/railway.toml`. The toml sets `healthcheckPath = "/health"`, `overlapSeconds = 0`, and `drainingSeconds = 0` to prevent Telegram 409 conflicts during deploy handoffs. If you change `index.ts` startup, double-check the healthcheck still flips to true after `bot.start()`'s `onStart` fires.
 
 ### 4. Shared-package boundaries
 
@@ -83,26 +85,69 @@ Railway CLI is available globally. To stream logs from the active service:
 
 ```bash
 railway logs --service ciclobot
+railway logs --service tractorbot
 ```
 
-(Or whatever the service is named in the user's Railway project.)
+For `los_piratas_bot`: its Railway service was named `piaratasbot` (with a typo) at creation time and the name has stuck. Use the service UUID instead of the name to avoid confusion:
+
+```bash
+# Discover service IDs once:
+railway status --json | jq '.environments.edges[].node.serviceInstances.edges[].node | {name: .serviceName, id: .serviceId}'
+
+# Then tail by ID (stable even if the name is renamed):
+railway logs --service <service-uuid>
+```
 
 If the user hasn't linked the repo locally to a Railway project, `railway link` first:
 
 ```bash
 railway link
-# then pick "Josep Vidal's Projects" → the right project → ciclobot service
+# then pick "Josep Vidal's Projects" → the right project → service
 ```
 
-### 3. What "deployed successfully" looks like for ciclobot
+### 2a. NEVER dump secrets to the conversation
 
-The runtime log should show:
+`railway variables --service X --kv` and `railway variables --service X --json` both dump every variable's **value**, including `BOT_TOKEN`, `GOOGLE_SERVICE_ACCOUNT_JSON`, and `GEMINI_API_KEY`. Putting those into the conversation transcript leaks them. Two safe patterns:
+
+1. **List names only**, never values:
+
+   ```bash
+   railway variables --service ciclobot --json | jq 'keys'
+   ```
+
+2. **Compare/copy values via shell, without echoing**:
+
+   ```bash
+   SHEET=$(railway variables --service ciclobot --json | jq -r '.SHEET_ID')
+   railway variables --service tractorbot --set "SHEET_ID=$SHEET"
+   # Never `echo $SHEET` and never `printf "%s" "$SHEET"` to stdout.
+   ```
+
+If a secret does leak (it's happened — service-account private keys got pasted into chat during this project's setup), revoke it immediately: Google Cloud Console → IAM → service account → Keys → delete; Telegram BotFather → `/token` → revoke; etc.
+
+### 3. What "deployed successfully" looks like
+
+Each bot prints its own startup banner. Watch for these lines:
 
 ```
 ciclobot starting — chat <CHAT_ID>, tz Europe/Madrid
+ciclobot: long polling started
 ```
 
-That line means: env parsed, Google Sheets reachable (tabs ensured), Telegram bot token accepted, long polling started. If you see that line, the deploy is healthy.
+```
+tractorbot starting — chat <CHAT_ID>, model gemini-2.5-flash-image
+tractorbot: long polling started
+```
+
+```
+los_piratas_bot starting — chat <CHAT_ID>, model gemini-2.5-flash
+los_piratas_bot: members loaded (N active)
+los_piratas_bot: long polling started
+```
+
+Those mean: env parsed, sheets reachable, Telegram token accepted, long polling started. Once `long polling started` appears the healthcheck flips to 200 and Railway marks the deploy SUCCESS.
+
+A few transient 409 retry lines (`409 from Telegram (another consumer holds the token), retrying in 3s`) are expected right after a deploy — they're the old container draining. They self-recover via `startBotWith409Retry` within ~10 seconds.
 
 ### 4. What failure modes to watch for
 
@@ -111,6 +156,9 @@ That line means: env parsed, Google Sheets reachable (tabs ensured), Telegram bo
 - `401 Unauthorized` from Telegram → wrong `BOT_TOKEN`.
 - `Error: Cannot find module ...` → Dockerfile workspace deploy missed something. Look at the `pnpm deploy` step output.
 - OOM during build → bump `NODE_OPTIONS=--max-old-space-size` in the Dockerfile.
+- `onlyChat: dropping update from chat <id> (expected <other>)` in logs → the bot is in a different chat than `CHAT_ID` says. For supergroups, the bot-API chat ID is `-100` + the web client's peer ID; don't confuse the two. Run `/getUpdates` against the bot token to read Telegram's authoritative `chat.id`.
+- `Gemini truncated reply (finishReason=MAX_TOKENS, text="...")` from los_piratas_bot → the model used all its tokens on internal "thinking" before generating. Fix: `thinkingConfig: { thinkingBudget: 0 }` in the generation config (already set in `gemini/text.ts` — flag if someone removes it).
+- `configFile: None` in `railway status --json` → Railway can't find `railway.toml`. The service's Config Path setting needs to point at `apps/<bot>/railway.toml` (set per-service in the Railway dashboard, not via the toml itself).
 
 ### 5. Don't deploy on the user's behalf
 
