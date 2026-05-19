@@ -3,7 +3,7 @@
 Telegram bot — **Capitán RPV**, the chronicler of the group. Two features:
 
 - **Daily Resume.** Every morning at 09:00 Europe/Madrid, the bot posts a short narrative summary of yesterday's chat (00:00–23:59 of the previous calendar day). Quotes 2–3 of the most active participants, storytelling tone, no invented facts.
-- **`/rpv [N]`.** On demand, anyone in the group can summarise the last `N` messages (default 100, max 500).
+- **`/rpv [N]`.** On demand, anyone in the group can summarise the last `N` messages (default 100, max 500). Rate-limited: at most one fire per 30s group-wide, and the same user can't fire more than once per 60s. Abusers get a snarky one-liner.
 
 **Language rule:** the body is written in **Spanish on Mon–Thu and Sat–Sun**, and in **English on Fridays**, aligned with `los_piratas_bot`'s "English Friday" theme. The fixed prefix lines (`📜 Daily Resume — …`, `🧭 Unread Resume — last N messages`) stay English always — they're the machine-readable contract for future "retrieve all resumes from last year" features.
 
@@ -59,6 +59,8 @@ Two tabs on the same spreadsheet as ciclobot and los_piratas_bot.
    - `RPV_DEFAULT_N` — defaults to `100`.
    - `RPV_MAX_N` — defaults to `500`.
    - `MESSAGE_RETENTION_DAYS` — defaults to `30`.
+   - `RPV_GROUP_COOLDOWN_SECONDS` — defaults to `30`. At most one `/rpv` reply per this window across all users.
+   - `RPV_USER_COOLDOWN_SECONDS` — defaults to `60`. Same user can't fire `/rpv` more often than this. When blocked, the bot replies with a random snarky line instead.
 6. **Deploy.** Railway picks up `apps/rpvbot/railway.toml`; build = Dockerfile; healthcheck = `/health`.
 
 ## Local development

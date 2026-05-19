@@ -4,7 +4,9 @@ import { z } from "zod";
 import {
   MESSAGE_RETENTION_DAYS,
   RPV_DEFAULT_N,
+  RPV_GROUP_COOLDOWN_SECONDS,
   RPV_MAX_N,
+  RPV_USER_COOLDOWN_SECONDS,
 } from "./domain/cap.js";
 
 const RawEnvSchema = z.object({
@@ -28,6 +30,16 @@ const RawEnvSchema = z.object({
     .int()
     .nonnegative()
     .default(MESSAGE_RETENTION_DAYS),
+  RPV_GROUP_COOLDOWN_SECONDS: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(RPV_GROUP_COOLDOWN_SECONDS),
+  RPV_USER_COOLDOWN_SECONDS: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(RPV_USER_COOLDOWN_SECONDS),
 });
 
 const ConfigSchema = RawEnvSchema.transform((raw) => ({
@@ -43,6 +55,8 @@ const ConfigSchema = RawEnvSchema.transform((raw) => ({
   rpvDefaultN: raw.RPV_DEFAULT_N,
   rpvMaxN: raw.RPV_MAX_N,
   messageRetentionDays: raw.MESSAGE_RETENTION_DAYS,
+  rpvGroupCooldownSeconds: raw.RPV_GROUP_COOLDOWN_SECONDS,
+  rpvUserCooldownSeconds: raw.RPV_USER_COOLDOWN_SECONDS,
 }));
 export type Config = z.infer<typeof ConfigSchema>;
 

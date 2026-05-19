@@ -17,8 +17,8 @@ export interface GeminiTextClient {
   generate(args: {
     system: string;
     user: string;
-    /** Sampling temperature. Defaults to 0.8 — narrative variety without
-     * inventing facts. */
+    /** Sampling temperature. Defaults to 0.5 — modest variety; high
+     * values produce purple "ship's-log" prose for trivial input. */
     temperature?: number;
   }): Promise<string>;
 }
@@ -42,7 +42,7 @@ export function createGeminiTextClient(params: {
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: [{ text: user }] }],
           generationConfig: {
-            temperature: temperature ?? 0.8,
+            temperature: temperature ?? 0.5,
             // Narratives are longer than los_piratas_bot one-liners; allow
             // multiple paragraphs without hitting the cap.
             maxOutputTokens: 2000,

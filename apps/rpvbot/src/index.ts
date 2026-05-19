@@ -9,6 +9,10 @@ import { buildRpv } from "./commands/rpv.js";
 import { loadConfig } from "./config.js";
 import { runDailyResume } from "./crons/daily-resume.js";
 import { runPrune } from "./crons/prune-messages.js";
+import {
+  createCooldown,
+  createUserCooldown,
+} from "./domain/cooldown.js";
 import { encodeNewlines, type MessageRecord } from "./domain/message.js";
 import { createGeminiTextClient } from "./gemini/text.js";
 import { createServices } from "./services.js";
@@ -37,7 +41,12 @@ async function main(): Promise<void> {
     },
   ]);
 
-  bot.command("rpv", buildRpv(services, gemini, config));
+  const groupCooldown = createCooldown(config.rpvGroupCooldownSeconds * 1000);
+  const userCooldown = createUserCooldown(config.rpvUserCooldownSeconds * 1000);
+  bot.command(
+    "rpv",
+    buildRpv({ services, gemini, config, groupCooldown, userCooldown }),
+  );
 
   bot.on("message:text", (ctx) => {
     const text = ctx.message.text;
