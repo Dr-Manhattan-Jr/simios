@@ -6,7 +6,7 @@ Telegram bot — **Capitán RPV**, the chronicler of the group. Three features:
 - **`/rpv <N | question>`.** On demand, anyone in the group can either:
   - Pass a **positive integer** (max 500) to get a Capitán RPV summary of the last N messages, OR
   - Pass a **free-text question** (any other input) to get an answer grounded in the persisted chat history. The question is treated as untrusted input: the system prompt refuses prompt-extraction, infra-disclosure, and instruction-injection attempts, and the bot never invents facts beyond the transcript.
-  Rate-limited: at most one fire per 30 s group-wide, and the same user can't fire more than once per 60 s. Abusers get a snarky one-liner.
+  Rate-limited: at most one fire per 60 s group-wide, and the same user can't fire more than once per 5 min. Abusers get a snarky one-liner. The bot reply-quotes the triggering `/rpv` so the answer threads under it in Telegram.
 - **Daily souls cron.** Every day at 12:00 Europe/Madrid, the bot reads yesterday's messages, groups them by member, and incrementally updates a per-member "soul" (a short, length-capped personality sketch) in the `rpv_souls` tab. Update is `current_soul + new_messages → new_soul` via Gemini synthesis. **Not exposed to users yet** — storage-only for now.
 
 **Language rule:** the summary/answer body is written in **Spanish on Mon–Thu and Sat–Sun**, and in **English on Fridays**, aligned with `los_piratas_bot`'s "English Friday" theme. The fixed prefix lines (`📜 Daily Resume — …`, `🧭 Unread Resume — last N messages`, `🧭 Question — …`) stay English always — they're the machine-readable contract for future "retrieve all resumes from last year" features.
@@ -83,8 +83,8 @@ User-supplied free text flowing into an LLM prompt is treated as untrusted. Two 
    - `PRUNE_CRON` — defaults to `0 3 * * *`.
    - `RPV_MAX_N` — defaults to `500`.
    - `MESSAGE_RETENTION_DAYS` — defaults to `30`.
-   - `RPV_GROUP_COOLDOWN_SECONDS` — defaults to `30`.
-   - `RPV_USER_COOLDOWN_SECONDS` — defaults to `60`.
+   - `RPV_GROUP_COOLDOWN_SECONDS` — defaults to `60`.
+   - `RPV_USER_COOLDOWN_SECONDS` — defaults to `300` (5 min).
    - `SOULS_MAX_CHARS` — defaults to `1500`. Hard cap on `soul_text` length (post-encoding).
    - `QUESTION_MAX_CHARS` — defaults to `400`. Cap applied to sanitised question text.
    - `QUESTION_CONTEXT_MESSAGES` — defaults to `300`. How many recent messages to feed the question prompt.

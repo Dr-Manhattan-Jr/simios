@@ -102,7 +102,16 @@ async function handleCount(
       language,
     }),
   });
-  await ctx.reply(`${unreadPrefix(tail.length)}\n\n${summary}`);
+  // Reply-quote the triggering /rpv so the answer threads under it in
+  // Telegram — easier to scan when several people use the bot in
+  // sequence. Only on the success path; snark/error/empty stay standalone.
+  const replyText = `${unreadPrefix(tail.length)}\n\n${summary}`;
+  const triggerId = ctx.message?.message_id;
+  if (triggerId !== undefined) {
+    await ctx.reply(replyText, { reply_parameters: { message_id: triggerId } });
+  } else {
+    await ctx.reply(replyText);
+  }
 
   const firstSentAt = tail[0]?.sent_at ?? new Date().toISOString();
   const lastSentAt = tail[tail.length - 1]?.sent_at ?? firstSentAt;
@@ -151,7 +160,13 @@ async function handleQuestion(
     }),
     temperature: 0.3,
   });
-  await ctx.reply(`${questionPrefix(parsed.text)}\n\n${answer}`);
+  const replyText = `${questionPrefix(parsed.text)}\n\n${answer}`;
+  const triggerId = ctx.message?.message_id;
+  if (triggerId !== undefined) {
+    await ctx.reply(replyText, { reply_parameters: { message_id: triggerId } });
+  } else {
+    await ctx.reply(replyText);
+  }
 
   const firstSentAt = tail[0]?.sent_at ?? new Date().toISOString();
   const lastSentAt = tail[tail.length - 1]?.sent_at ?? firstSentAt;
