@@ -6,7 +6,7 @@ import type { Cooldown, UserCooldown } from "../domain/cooldown.js";
 import { summaryLanguage, type SummaryLanguage } from "../domain/day.js";
 import type { MessageRecord } from "../domain/message.js";
 import { encodeNewlines } from "../domain/message.js";
-import { randomSnark } from "../domain/snark.js";
+import { snarkWithCooldown } from "../domain/snark.js";
 import type { SummaryRecord } from "../domain/summary.js";
 import { renderTranscript } from "../domain/transcript.js";
 import type { GeminiTextClient } from "../gemini/text.js";
@@ -210,19 +210,21 @@ export function buildRpv(deps: RpvDeps) {
     const userId = ctx.from?.id;
 
     // Per-user gate first so abusers don't even bump the group counter.
-    if (
-      userId !== undefined &&
-      !deps.userCooldown.tryFire(userId, now)
-    ) {
-      await ctx.reply(randomSnark(language));
-      return;
+    if (userId !== undefined) {
+      const userGate = deps.userCooldown.tryFire(userId, now);
+      if (!userGate.fired) {
+        await ctx.reply(snarkWithCooldown(language, userGate.remainingMs));
+        return;
+      }
     }
-    if (!deps.groupCooldown.tryFire(now)) {
-      await ctx.reply(randomSnark(language));
+    const groupGate = deps.groupCooldown.tryFire(now);
+    if (!groupGate.fired) {
+      await ctx.reply(snarkWithCooldown(language, groupGate.remainingMs));
       return;
     }
     if (inFlight) {
-      await ctx.reply(randomSnark(language));
+      // No exact remaining time for an in-flight request; just snark.
+      await ctx.reply(snarkWithCooldown(language, 0));
       return;
     }
     inFlight = true;

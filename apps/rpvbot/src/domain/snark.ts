@@ -31,3 +31,25 @@ export function randomSnark(language: SummaryLanguage): string {
   const i = Math.floor(Math.random() * pool.length);
   return pool[i] ?? pool[0] ?? "…";
 }
+
+/**
+ * "MM:SS" suffix. Rounds remaining ms UP so the user is never told
+ * "00:00" while the gate is still closed — a 0.5s remainder still
+ * reads as "00:01".
+ */
+export function formatRemaining(remainingMs: number): string {
+  const totalSec = Math.max(1, Math.ceil(remainingMs / 1000));
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
+export function snarkWithCooldown(
+  language: SummaryLanguage,
+  remainingMs: number,
+): string {
+  const base = randomSnark(language);
+  // No exact remaining time (e.g. in-flight request) → no parenthetical.
+  if (remainingMs <= 0) return base;
+  return `${base} (${formatRemaining(remainingMs)})`;
+}

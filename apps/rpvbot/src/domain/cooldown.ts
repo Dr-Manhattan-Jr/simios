@@ -1,18 +1,31 @@
 /**
+ * Result of attempting to fire a cooldown gate. Always returns
+ * `remainingMs` for telemetry — 0 on success (i.e. fired), positive on
+ * block. Lets the caller render "try again in 42s" replies without
+ * having to track timestamps externally.
+ */
+export type CooldownResult =
+  | { readonly fired: true; readonly remainingMs: 0 }
+  | { readonly fired: false; readonly remainingMs: number };
+
+/**
  * Group-wide cooldown gate. The bot fires at most once every `windowMs`
  * milliseconds, regardless of who triggered it.
  */
 export interface Cooldown {
-  tryFire(now: number): boolean;
+  tryFire(now: number): CooldownResult;
 }
 
 export function createCooldown(windowMs: number): Cooldown {
   let lastFiredAt = Number.NEGATIVE_INFINITY;
   return {
     tryFire(now) {
-      if (now - lastFiredAt < windowMs) return false;
+      const elapsed = now - lastFiredAt;
+      if (elapsed < windowMs) {
+        return { fired: false, remainingMs: windowMs - elapsed };
+      }
       lastFiredAt = now;
-      return true;
+      return { fired: true, remainingMs: 0 };
     },
   };
 }
@@ -23,7 +36,7 @@ export function createCooldown(windowMs: number): Cooldown {
  * for a small chat (handful of users), would need eviction if scaled up.
  */
 export interface UserCooldown {
-  tryFire(userId: number, now: number): boolean;
+  tryFire(userId: number, now: number): CooldownResult;
 }
 
 export function createUserCooldown(windowMs: number): UserCooldown {
@@ -31,9 +44,12 @@ export function createUserCooldown(windowMs: number): UserCooldown {
   return {
     tryFire(userId, now) {
       const last = lastByUser.get(userId) ?? Number.NEGATIVE_INFINITY;
-      if (now - last < windowMs) return false;
+      const elapsed = now - last;
+      if (elapsed < windowMs) {
+        return { fired: false, remainingMs: windowMs - elapsed };
+      }
       lastByUser.set(userId, now);
-      return true;
+      return { fired: true, remainingMs: 0 };
     },
   };
 }
