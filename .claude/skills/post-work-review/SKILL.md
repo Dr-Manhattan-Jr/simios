@@ -25,7 +25,7 @@ These are non-negotiable in this repo, enforced by ESLint:
 
 ### 3. Per-app rules (apply to every `apps/<bot>/`)
 
-The monorepo currently hosts three bots: `ciclobot` (weightlifting tracker, sheets-backed), `tractorbot` (trigger-word image generation), `los_piratas_bot` (English-Friday persona). The rules below apply to all three and to any future bot.
+The monorepo currently hosts four bots: `ciclobot` (weightlifting tracker, sheets-backed), `tractorbot` (trigger-word image generation), `los_piratas_bot` (English-Friday persona), `rpvbot` (Capitán RPV — daily group chronicler + `/rpv N` on-demand summary). The rules below apply to all four and to any future bot.
 
 - **One command per file** under `apps/<bot>/src/commands/` (`log.ts`, `weight.ts`, `join.ts`, `crew.ts`, …). Don't bundle multiple commands into one file.
 - **One sheet tab per file** under `apps/<bot>/src/sheets/`. Each file defines a `createTable(...)` factory using `defineTable` from `@simios/sheets-client`. Don't hand-roll the `listAll`/`upsert`/`removeByKey` shapes.
@@ -143,6 +143,11 @@ tractorbot: long polling started
 los_piratas_bot starting — chat <CHAT_ID>, model gemini-2.5-flash
 los_piratas_bot: members loaded (N active)
 los_piratas_bot: long polling started
+```
+
+```
+rpvbot starting — chat <CHAT_ID>, model gemini-2.5-flash, daily <cron> <tz>
+rpvbot: long polling started
 ```
 
 Those mean: env parsed, sheets reachable, Telegram token accepted, long polling started. Once `long polling started` appears the healthcheck flips to 200 and Railway marks the deploy SUCCESS.
