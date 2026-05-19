@@ -10,6 +10,12 @@ import {
   type MessagesTable,
 } from "./sheets/messages.js";
 import {
+  createTable as createSoulsTable,
+  HEADER as SOULS_HEADER,
+  TAB as SOULS_TAB,
+  type SoulsTable,
+} from "./sheets/souls.js";
+import {
   createTable as createSummariesTable,
   HEADER as SUMMARIES_HEADER,
   TAB as SUMMARIES_TAB,
@@ -21,6 +27,7 @@ export interface Services {
   readonly sheets: SheetsClient;
   readonly messages: MessagesTable;
   readonly summaries: SummariesTable;
+  readonly souls: SoulsTable;
 }
 
 export async function createServices(config: Config): Promise<Services> {
@@ -30,9 +37,11 @@ export async function createServices(config: Config): Promise<Services> {
   });
   const messages = createMessagesTable(sheets);
   const summaries = createSummariesTable(sheets);
+  const souls = createSoulsTable(sheets);
   await Promise.all([
     sheets.ensureTab(MESSAGES_TAB, MESSAGES_HEADER),
     sheets.ensureTab(SUMMARIES_TAB, SUMMARIES_HEADER),
+    sheets.ensureTab(SOULS_TAB, SOULS_HEADER),
   ]);
-  return { config, sheets, messages, summaries };
+  return { config, sheets, messages, summaries, souls };
 }

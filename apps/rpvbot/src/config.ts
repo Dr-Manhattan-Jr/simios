@@ -3,10 +3,12 @@ import { ServiceAccountCredentialsSchema } from "@simios/sheets-client";
 import { z } from "zod";
 import {
   MESSAGE_RETENTION_DAYS,
-  RPV_DEFAULT_N,
+  QUESTION_CONTEXT_MESSAGES,
+  QUESTION_MAX_CHARS,
   RPV_GROUP_COOLDOWN_SECONDS,
   RPV_MAX_N,
   RPV_USER_COOLDOWN_SECONDS,
+  SOULS_MAX_CHARS,
 } from "./domain/cap.js";
 
 const RawEnvSchema = z.object({
@@ -15,15 +17,15 @@ const RawEnvSchema = z.object({
   GEMINI_API_KEY: NonEmptyString,
   GEMINI_MODEL: NonEmptyString.default("gemini-2.5-flash"),
   TZ: NonEmptyString.default("Europe/Madrid"),
-  // Same spreadsheet as ciclobot and los_piratas_bot. We add two new tabs.
+  // Same spreadsheet as ciclobot and los_piratas_bot. We add tabs here.
   SHEET_ID: NonEmptyString,
   GOOGLE_SERVICE_ACCOUNT_JSON: JsonObject.pipe(
     ServiceAccountCredentialsSchema,
   ),
-  // Tunable so dev runs can fire the daily flow without waiting 24h.
+  // Tunable so dev runs can fire the daily flows without waiting 24h.
   DAILY_RESUME_CRON: NonEmptyString.default("0 9 * * *"),
+  SOULS_CRON: NonEmptyString.default("0 12 * * *"),
   PRUNE_CRON: NonEmptyString.default("0 3 * * *"),
-  RPV_DEFAULT_N: z.coerce.number().int().positive().default(RPV_DEFAULT_N),
   RPV_MAX_N: z.coerce.number().int().positive().default(RPV_MAX_N),
   MESSAGE_RETENTION_DAYS: z.coerce
     .number()
@@ -40,6 +42,21 @@ const RawEnvSchema = z.object({
     .int()
     .nonnegative()
     .default(RPV_USER_COOLDOWN_SECONDS),
+  SOULS_MAX_CHARS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(SOULS_MAX_CHARS),
+  QUESTION_MAX_CHARS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(QUESTION_MAX_CHARS),
+  QUESTION_CONTEXT_MESSAGES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(QUESTION_CONTEXT_MESSAGES),
 });
 
 const ConfigSchema = RawEnvSchema.transform((raw) => ({
@@ -51,12 +68,15 @@ const ConfigSchema = RawEnvSchema.transform((raw) => ({
   sheetId: raw.SHEET_ID,
   serviceAccount: raw.GOOGLE_SERVICE_ACCOUNT_JSON,
   dailyResumeCron: raw.DAILY_RESUME_CRON,
+  soulsCron: raw.SOULS_CRON,
   pruneCron: raw.PRUNE_CRON,
-  rpvDefaultN: raw.RPV_DEFAULT_N,
   rpvMaxN: raw.RPV_MAX_N,
   messageRetentionDays: raw.MESSAGE_RETENTION_DAYS,
   rpvGroupCooldownSeconds: raw.RPV_GROUP_COOLDOWN_SECONDS,
   rpvUserCooldownSeconds: raw.RPV_USER_COOLDOWN_SECONDS,
+  soulsMaxChars: raw.SOULS_MAX_CHARS,
+  questionMaxChars: raw.QUESTION_MAX_CHARS,
+  questionContextMessages: raw.QUESTION_CONTEXT_MESSAGES,
 }));
 export type Config = z.infer<typeof ConfigSchema>;
 

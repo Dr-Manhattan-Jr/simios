@@ -23,6 +23,12 @@ export interface GeminiTextClient {
   }): Promise<string>;
 }
 
+// Hard cap on how long we wait for Gemini. Without this, a hung upstream
+// request would deadlock the /rpv in-flight latch forever (every
+// subsequent /rpv would snark-reply until the bot restarts), and would
+// stall the souls cron mid-loop.
+const REQUEST_TIMEOUT_MS = 60_000;
+
 export function createGeminiTextClient(params: {
   readonly apiKey: string;
   readonly model: string;
@@ -32,27 +38,44 @@ export function createGeminiTextClient(params: {
     `${encodeURIComponent(params.model)}:generateContent`;
   return {
     async generate({ system, user, temperature }) {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": params.apiKey,
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: "user", parts: [{ text: user }] }],
-          generationConfig: {
-            temperature: temperature ?? 0.5,
-            // Narratives are longer than los_piratas_bot one-liners; allow
-            // multiple paragraphs without hitting the cap.
-            maxOutputTokens: 2000,
-            // Disable Gemini 2.5 Flash's internal "thinking" tokens —
-            // they share the maxOutputTokens budget and silently truncate
-            // the visible reply. The persona doesn't need chain-of-thought.
-            thinkingConfig: { thinkingBudget: 0 },
+      const controller = new AbortController();
+      const timeoutHandle = setTimeout(() => {
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": params.apiKey,
           },
-        }),
-      });
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: system }] },
+            contents: [{ role: "user", parts: [{ text: user }] }],
+            generationConfig: {
+              temperature: temperature ?? 0.5,
+              // Narratives are longer than los_piratas_bot one-liners; allow
+              // multiple paragraphs without hitting the cap.
+              maxOutputTokens: 2000,
+              // Disable Gemini 2.5 Flash's internal "thinking" tokens —
+              // they share the maxOutputTokens budget and silently truncate
+              // the visible reply. The persona doesn't need chain-of-thought.
+              thinkingConfig: { thinkingBudget: 0 },
+            },
+          }),
+        });
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          throw new Error(
+            `Gemini request timed out after ${String(REQUEST_TIMEOUT_MS)}ms`,
+          );
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeoutHandle);
+      }
       if (!response.ok) {
         const body = await response.text();
         throw new Error(

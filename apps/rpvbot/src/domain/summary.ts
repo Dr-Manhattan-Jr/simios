@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const SummaryKindSchema = z.enum(["daily", "unread"]);
+export const SummaryKindSchema = z.enum(["daily", "unread", "question"]);
 export type SummaryKind = z.infer<typeof SummaryKindSchema>;
 
 /**

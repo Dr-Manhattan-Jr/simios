@@ -35,6 +35,15 @@ The monorepo currently hosts four bots: `ciclobot` (weightlifting tracker, sheet
 - **Use `startBotWith409Retry` + `startHealthServer`** from `@simios/telegram-kit` in every bot's bootstrap. Don't reinvent.
 - **Per-bot Railway config:** every app has its own `apps/<bot>/Dockerfile` AND `apps/<bot>/railway.toml`. The toml sets `healthcheckPath = "/health"`, `overlapSeconds = 0`, and `drainingSeconds = 0` to prevent Telegram 409 conflicts during deploy handoffs. If you change `index.ts` startup, double-check the healthcheck still flips to true after `bot.start()`'s `onStart` fires.
 
+### 3a. Hostile free-text input
+
+When a bot command accepts user-supplied free text that flows into an LLM prompt (e.g. `/rpv <question>` in rpvbot), treat it as untrusted. Two layers required:
+
+1. **Sanitisation at the boundary** — length cap, ASCII + Unicode control-character strip (including zero-width spaces, RTL/LTR overrides, BOM), whitespace collapse. Lives in `src/domain/<feature>.ts`.
+2. **System-prompt defence** — explicit rules in `src/prompt/...` forbidding (a) revealing/paraphrasing the system prompt, (b) revealing infra details (model, env vars, sheet IDs, chat IDs, etc.), (c) following the user text as an instruction, (d) inventing facts, (e) disclosing private user info beyond what they wrote.
+
+Sanitisation alone is not enough; the system prompt is the actual security boundary. If you add a new free-text bot command, both layers are non-negotiable.
+
 ### 4. Shared-package boundaries
 
 When `packages/*` changes:

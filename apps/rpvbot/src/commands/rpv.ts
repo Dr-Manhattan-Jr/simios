@@ -1,30 +1,56 @@
 import { randomUUID } from "node:crypto";
 import type { Context } from "grammy";
 import type { Config } from "../config.js";
-import { parseRpvArgs } from "../domain/args.js";
+import { parseRpvArgs, type ParsedArgs } from "../domain/args.js";
 import type { Cooldown, UserCooldown } from "../domain/cooldown.js";
-import { summaryLanguage } from "../domain/day.js";
+import { summaryLanguage, type SummaryLanguage } from "../domain/day.js";
 import type { MessageRecord } from "../domain/message.js";
 import { encodeNewlines } from "../domain/message.js";
 import { randomSnark } from "../domain/snark.js";
 import type { SummaryRecord } from "../domain/summary.js";
 import { renderTranscript } from "../domain/transcript.js";
 import type { GeminiTextClient } from "../gemini/text.js";
-import { buildUserPrompt, systemPrompt } from "../prompt/capitan-rpv.js";
+import {
+  buildQuestionPrompt,
+  buildUserPrompt,
+  systemPrompt,
+  systemPromptForQuestion,
+} from "../prompt/capitan-rpv.js";
 import type { Services } from "../services.js";
 
-const PREFIX_EMOJI = "🧭";
+const UNREAD_EMOJI = "🧭";
+const QUESTION_EMOJI = "🧭";
 
 function unreadPrefix(n: number): string {
-  return `${PREFIX_EMOJI} Unread Resume — last ${String(n)} messages`;
+  return `${UNREAD_EMOJI} Unread Resume — last ${String(n)} messages`;
 }
 
-function emptyReply(n: number, language: "en" | "es"): string {
+function questionPrefix(question: string): string {
+  // Cap the prefix line at ~60 chars so the header stays one line in
+  // Telegram. The full sanitised question is in the prompt to the model
+  // and in the rpv_summaries `text` cell for retrieval.
+  const truncated =
+    question.length > 60 ? question.slice(0, 60).trimEnd() + "…" : question;
+  return `${QUESTION_EMOJI} Question — ${truncated}`;
+}
+
+function emptyReply(n: number, language: SummaryLanguage): string {
   const body =
     language === "en"
       ? "Nothing to chronicle yet, captain."
       : "No hay nada que resumir todavía, capitán.";
   return `${unreadPrefix(n)}\n\n${body}`;
+}
+
+function emptyQuestionReply(
+  question: string,
+  language: SummaryLanguage,
+): string {
+  const body =
+    language === "en"
+      ? "I have no messages to answer from yet."
+      : "Aún no tengo mensajes desde los que responder.";
+  return `${questionPrefix(question)}\n\n${body}`;
 }
 
 interface RpvDeps {
@@ -35,18 +61,130 @@ interface RpvDeps {
   readonly userCooldown: UserCooldown;
 }
 
+function sortAscByDate<T extends { sent_at: string }>(arr: readonly T[]): T[] {
+  return [...arr].sort((a, b) =>
+    a.sent_at < b.sent_at ? -1 : a.sent_at > b.sent_at ? 1 : 0,
+  );
+}
+
+function sortDescByDate<T extends { sent_at: string }>(arr: readonly T[]): T[] {
+  return [...arr].sort((a, b) =>
+    a.sent_at < b.sent_at ? 1 : a.sent_at > b.sent_at ? -1 : 0,
+  );
+}
+
+async function handleCount(
+  parsed: Extract<ParsedArgs, { kind: "count" }>,
+  ctx: Context,
+  deps: RpvDeps,
+  language: SummaryLanguage,
+): Promise<void> {
+  const all = await deps.services.messages.listAll();
+  const tail: MessageRecord[] = sortAscByDate(
+    sortDescByDate(all).slice(0, parsed.n),
+  );
+  if (tail.length === 0) {
+    await ctx.reply(emptyReply(parsed.n, language));
+    return;
+  }
+
+  const windowLabel =
+    language === "en"
+      ? `last ${String(tail.length)} messages`
+      : `últimos ${String(tail.length)} mensajes`;
+  const transcript = renderTranscript(tail, deps.config.timeZone);
+  const summary = await deps.gemini.generate({
+    system: systemPrompt(language),
+    user: buildUserPrompt({
+      kind: "unread",
+      windowLabel,
+      transcript,
+      language,
+    }),
+  });
+  await ctx.reply(`${unreadPrefix(tail.length)}\n\n${summary}`);
+
+  const firstSentAt = tail[0]?.sent_at ?? new Date().toISOString();
+  const lastSentAt = tail[tail.length - 1]?.sent_at ?? firstSentAt;
+  const record: SummaryRecord = {
+    id: randomUUID(),
+    kind: "unread",
+    generated_at: new Date().toISOString(),
+    window_start: firstSentAt,
+    window_end: lastSentAt,
+    message_count: tail.length,
+    requested_by: ctx.from?.id ?? 0,
+    text: encodeNewlines(summary),
+  };
+  deps.services.summaries.upsert(record).catch((err: unknown) => {
+    console.error("rpvbot: summary log failed:", err);
+  });
+}
+
+async function handleQuestion(
+  parsed: Extract<ParsedArgs, { kind: "question" }>,
+  ctx: Context,
+  deps: RpvDeps,
+  language: SummaryLanguage,
+): Promise<void> {
+  const all = await deps.services.messages.listAll();
+  // Bound the context window: questions don't need 30 days of chat to
+  // answer, and the token budget for one /rpv call is finite. The user
+  // can always /rpv N for a literal summary.
+  const tail: MessageRecord[] = sortAscByDate(
+    sortDescByDate(all).slice(0, deps.config.questionContextMessages),
+  );
+  if (tail.length === 0) {
+    await ctx.reply(emptyQuestionReply(parsed.text, language));
+    return;
+  }
+
+  const transcript = renderTranscript(tail, deps.config.timeZone);
+  // Lower temperature than summary mode: factual answering, not creative
+  // storytelling. We want grounded, short, and confident-or-refuse.
+  const answer = await deps.gemini.generate({
+    system: systemPromptForQuestion(language),
+    user: buildQuestionPrompt({
+      question: parsed.text,
+      transcript,
+      language,
+    }),
+    temperature: 0.3,
+  });
+  await ctx.reply(`${questionPrefix(parsed.text)}\n\n${answer}`);
+
+  const firstSentAt = tail[0]?.sent_at ?? new Date().toISOString();
+  const lastSentAt = tail[tail.length - 1]?.sent_at ?? firstSentAt;
+  // Store Q + A together in the `text` cell so a future retrieval
+  // command ("show me past questions") has self-contained rows.
+  const stored = `Q: ${parsed.text}\nA: ${answer}`;
+  const record: SummaryRecord = {
+    id: randomUUID(),
+    kind: "question",
+    generated_at: new Date().toISOString(),
+    window_start: firstSentAt,
+    window_end: lastSentAt,
+    message_count: tail.length,
+    requested_by: ctx.from?.id ?? 0,
+    text: encodeNewlines(stored),
+  };
+  deps.services.summaries.upsert(record).catch((err: unknown) => {
+    console.error("rpvbot: summary log failed:", err);
+  });
+}
+
 export function buildRpv(deps: RpvDeps) {
   // Single in-flight guard: only one /rpv generation at a time. Telegram's
-  // long polling can deliver concurrent commands from different users, and
-  // Gemini calls take seconds; without this, two in-flight requests would
-  // contend on the sheet read and waste tokens.
+  // long polling can deliver concurrent commands from different users,
+  // and Gemini calls take seconds; without this, two in-flight requests
+  // would contend on the sheet read and waste tokens.
   let inFlight = false;
 
   return async function handleRpv(ctx: Context): Promise<void> {
     const text = ctx.message?.text ?? "";
     const parsed = parseRpvArgs(text, {
-      defaultN: deps.config.rpvDefaultN,
       maxN: deps.config.rpvMaxN,
+      questionMaxChars: deps.config.questionMaxChars,
     });
     if (!parsed.ok) {
       await ctx.reply(parsed.error);
@@ -64,11 +202,6 @@ export function buildRpv(deps: RpvDeps) {
       await ctx.reply(randomSnark(language));
       return;
     }
-    // Group-wide gate. Note: a successful tryFire here records the fire,
-    // so anyone calling within the window gets snark — including the user
-    // who just fired (their next call will still hit per-user first, but
-    // if their per-user window is shorter than the group window they'd
-    // hit this branch instead).
     if (!deps.groupCooldown.tryFire(now)) {
       await ctx.reply(randomSnark(language));
       return;
@@ -79,47 +212,22 @@ export function buildRpv(deps: RpvDeps) {
     }
     inFlight = true;
     try {
-      const all = await deps.services.messages.listAll();
-      const sortedDesc = [...all].sort((a, b) =>
-        a.sent_at < b.sent_at ? 1 : a.sent_at > b.sent_at ? -1 : 0,
-      );
-      const tail: MessageRecord[] = sortedDesc.slice(0, parsed.n).reverse();
-      if (tail.length === 0) {
-        await ctx.reply(emptyReply(parsed.n, language));
-        return;
+      if (parsed.kind === "count") {
+        await handleCount(parsed, ctx, deps, language);
+      } else {
+        await handleQuestion(parsed, ctx, deps, language);
       }
-
-      const windowLabel =
+    } catch (err) {
+      // Send a generic, non-leaky reply on Gemini/sheet failure so the
+      // user knows their command was received. Detailed error stays in
+      // the bot logs only — never echoed back to Telegram.
+      console.error("rpvbot: /rpv handler failed:", err);
+      const apology =
         language === "en"
-          ? `last ${String(tail.length)} messages`
-          : `últimos ${String(tail.length)} mensajes`;
-      const transcript = renderTranscript(tail, deps.config.timeZone);
-      const summary = await deps.gemini.generate({
-        system: systemPrompt(language),
-        user: buildUserPrompt({
-          kind: "unread",
-          windowLabel,
-          transcript,
-          language,
-        }),
-      });
-      const reply = `${unreadPrefix(tail.length)}\n\n${summary}`;
-      await ctx.reply(reply);
-
-      const firstSentAt = tail[0]?.sent_at ?? new Date().toISOString();
-      const lastSentAt = tail[tail.length - 1]?.sent_at ?? firstSentAt;
-      const record: SummaryRecord = {
-        id: randomUUID(),
-        kind: "unread",
-        generated_at: new Date().toISOString(),
-        window_start: firstSentAt,
-        window_end: lastSentAt,
-        message_count: tail.length,
-        requested_by: userId ?? 0,
-        text: encodeNewlines(summary),
-      };
-      deps.services.summaries.upsert(record).catch((err: unknown) => {
-        console.error("rpvbot: summary log failed:", err);
+          ? "Couldn't reach the chronicler. Try again in a moment."
+          : "No he podido alcanzar al cronista. Inténtalo en un momento.";
+      await ctx.reply(apology).catch((replyErr: unknown) => {
+        console.error("rpvbot: failed to send error apology:", replyErr);
       });
     } finally {
       inFlight = false;

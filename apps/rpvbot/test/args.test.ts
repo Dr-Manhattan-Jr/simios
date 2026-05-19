@@ -2,22 +2,33 @@ import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 import { parseRpvArgs } from "../src/domain/args.js";
 
-const OPTS = { defaultN: 100, maxN: 500 };
+const OPTS = { maxN: 500, questionMaxChars: 400 };
 
 describe("parseRpvArgs", () => {
-  it("bare /rpv returns default N", () => {
+  it("bare /rpv is rejected with usage", () => {
     const r = parseRpvArgs("/rpv", OPTS);
-    assert.deepEqual(r, { ok: true, n: 100 });
+    assert.equal(r.ok, false);
+    if (!r.ok) assert.match(r.error, /Usage/);
   });
 
-  it("/rpv with explicit N returns that N", () => {
+  it("/rpv@bot with no arg is rejected", () => {
+    const r = parseRpvArgs("/rpv@rpv_bot", OPTS);
+    assert.equal(r.ok, false);
+  });
+
+  it("integer arg → kind=count", () => {
     const r = parseRpvArgs("/rpv 50", OPTS);
-    assert.deepEqual(r, { ok: true, n: 50 });
+    assert.equal(r.ok, true);
+    if (r.ok) {
+      assert.equal(r.kind, "count");
+      if (r.kind === "count") assert.equal(r.n, 50);
+    }
   });
 
-  it("/rpv@botname with N strips the @mention", () => {
+  it("/rpv@botname 75 strips the @mention", () => {
     const r = parseRpvArgs("/rpv@rpv_bot 75", OPTS);
-    assert.deepEqual(r, { ok: true, n: 75 });
+    assert.equal(r.ok, true);
+    if (r.ok && r.kind === "count") assert.equal(r.n, 75);
   });
 
   it("zero is rejected as non-positive", () => {
@@ -32,31 +43,39 @@ describe("parseRpvArgs", () => {
     if (!r.ok) assert.match(r.error, /positive/);
   });
 
-  it("above max is rejected with explicit max error (not silently capped)", () => {
+  it("above max is rejected with explicit max error", () => {
     const r = parseRpvArgs("/rpv 9999", OPTS);
     assert.equal(r.ok, false);
     if (!r.ok) assert.match(r.error, /500/);
   });
 
-  it("non-numeric argument is rejected with usage hint", () => {
-    const r = parseRpvArgs("/rpv abc", OPTS);
-    assert.equal(r.ok, false);
-    if (!r.ok) assert.match(r.error, /Usage/);
+  it("free-text question → kind=question", () => {
+    const r = parseRpvArgs("/rpv what did alice say about padel?", OPTS);
+    assert.equal(r.ok, true);
+    if (r.ok) {
+      assert.equal(r.kind, "question");
+      if (r.kind === "question") {
+        assert.match(r.text, /padel/);
+      }
+    }
   });
 
-  it("floats are rejected", () => {
-    const r = parseRpvArgs("/rpv 50.5", OPTS);
-    assert.equal(r.ok, false);
+  it("Spanish question with accents is preserved", () => {
+    const r = parseRpvArgs("/rpv ¿de qué hablaron ayer?", OPTS);
+    assert.equal(r.ok, true);
+    if (r.ok && r.kind === "question") {
+      assert.match(r.text, /qué hablaron/);
+    }
   });
 
-  it("/rpv50 (no space) is NOT silently parsed as default; rejected", () => {
+  it("/rpv50 (no space) is rejected", () => {
     const r = parseRpvArgs("/rpv50", OPTS);
     assert.equal(r.ok, false);
-    if (!r.ok) assert.match(r.error, /Usage/);
   });
 
-  it("totally unrelated text is rejected (defensive — shouldn't reach handler)", () => {
-    const r = parseRpvArgs("hello", OPTS);
+  it("/rpv 50.5 (float) is rejected as not a positive integer", () => {
+    const r = parseRpvArgs("/rpv 50.5", OPTS);
     assert.equal(r.ok, false);
+    if (!r.ok) assert.match(r.error, /positive integer/);
   });
 });
