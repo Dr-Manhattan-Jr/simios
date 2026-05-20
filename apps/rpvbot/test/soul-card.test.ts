@@ -18,6 +18,7 @@ function card(over: Partial<SoulCard> = {}): SoulCard {
     quirks: ["Responde con monosílabos durante días"],
     skills: ["Nigromancia de chats muertos", "+5 a descarrilar"],
     catchphrase: "no, ¿qué estás fumando?",
+    notes: "Lleva semanas peleándose con el deploy de Railway; chiste recurrente sobre los gorros pequeños.",
     stats: {
       verbosity: 7,
       humor: 8,
@@ -92,6 +93,25 @@ describe("SoulCardSchema", () => {
       true,
     );
   });
+
+  it("rejects a card missing the required notes field", () => {
+    const { notes: _omit, ...withoutNotes } = card();
+    assert.equal(SoulCardSchema.safeParse(withoutNotes).success, false);
+  });
+
+  it("accepts an empty notes string (near-silent member)", () => {
+    assert.equal(SoulCardSchema.safeParse(card({ notes: "" })).success, true);
+  });
+
+  it("accepts notes at exactly the length cap", () => {
+    const ok = card({ notes: "x".repeat(1200) });
+    assert.equal(SoulCardSchema.safeParse(ok).success, true);
+  });
+
+  it("rejects notes over the length cap", () => {
+    const bad = card({ notes: "x".repeat(1201) });
+    assert.equal(SoulCardSchema.safeParse(bad).success, false);
+  });
 });
 
 describe("parseSoulCard", () => {
@@ -123,6 +143,12 @@ describe("parseSoulCard", () => {
   it("returns null for empty string", () => {
     assert.equal(parseSoulCard(""), null);
   });
+
+  it("returns null for a legacy card with no notes field (forces regen)", () => {
+    // A card shaped like the 09827df deploy — every field except `notes`.
+    const { notes: _omit, ...legacy } = card();
+    assert.equal(parseSoulCard(JSON.stringify(legacy)), null);
+  });
 });
 
 describe("renderSouls (card-aware)", () => {
@@ -146,7 +172,7 @@ describe("renderSouls (card-aware)", () => {
     assert.equal(out.includes("Bob"), false);
   });
 
-  it("includes the card header with title and the six stats + skills", () => {
+  it("includes the card header with title, the six stats, skills, and notes", () => {
     const out = renderSouls([
       soulRow({ user_id: 1, first_name: "Ana", username: "ana" }),
     ]);
@@ -158,6 +184,19 @@ describe("renderSouls (card-aware)", () => {
     assert.match(out, /horniness 2/);
     assert.match(out, /menace 4/);
     assert.match(out, /skills:.*Nigromancia/);
+    assert.match(out, /notes:.*Railway/);
+  });
+
+  it("omits the notes segment when notes is empty", () => {
+    const out = renderSouls([
+      soulRow({
+        user_id: 1,
+        first_name: "Ana",
+        username: "ana",
+        soul_text: encodeNewlines(serialiseSoulCard(card({ notes: "" }))),
+      }),
+    ]);
+    assert.equal(out.includes("notes:"), false);
   });
 
   it("fences the compact card body in <msg>…</msg>", () => {

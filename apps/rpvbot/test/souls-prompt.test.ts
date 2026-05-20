@@ -28,6 +28,11 @@ describe("systemPromptForSoul (RPG card)", () => {
     assert.match(systemPromptForSoul("es"), /skills/i);
   });
 
+  it("describes the free-text notes field", () => {
+    assert.match(systemPromptForSoul("en"), /notes: a free-text running memory/i);
+    assert.match(systemPromptForSoul("es"), /notes: una memoria libre/i);
+  });
+
   it("asks for JSON-only output", () => {
     assert.match(systemPromptForSoul("en"), /ONLY the JSON/i);
     assert.match(systemPromptForSoul("es"), /SOLO la carta JSON/i);
@@ -55,8 +60,9 @@ describe("SOUL_CARD_RESPONSE_SCHEMA", () => {
     ].concat("horniness").sort());
   });
 
-  it("requires the card fields including skills", () => {
+  it("requires the card fields including skills and notes", () => {
     assert.ok(SOUL_CARD_RESPONSE_SCHEMA.required.includes("skills"));
+    assert.ok(SOUL_CARD_RESPONSE_SCHEMA.required.includes("notes"));
     assert.ok(SOUL_CARD_RESPONSE_SCHEMA.required.includes("stats"));
     assert.ok(SOUL_CARD_RESPONSE_SCHEMA.required.includes("traits"));
   });

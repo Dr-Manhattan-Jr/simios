@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NOTES_MAX_CHARS } from "./cap.js";
 import { fenceBody } from "./fence.js";
 import { decodeNewlines, type MessageRecord } from "./message.js";
 import { stripControlChars } from "./sanitise.js";
@@ -37,6 +38,12 @@ export const SoulCardSchema = z.object({
   skills: z.array(z.string().min(1).max(140)).min(1).max(5),
   // A characteristic line/catchphrase — not everyone has one.
   catchphrase: z.string().max(200).optional(),
+  // Free-text running memory — looser than the structured fields above.
+  // The daily cron rewrites it each run, folding in the new day, so it
+  // holds nuance / in-jokes / evolving context that doesn't fit a
+  // trait/quirk/skill slot. Required (every card has it) but may be an
+  // empty string for a near-silent member.
+  notes: z.string().max(NOTES_MAX_CHARS),
   stats: SoulStatsSchema,
 });
 export type SoulCard = z.infer<typeof SoulCardSchema>;
@@ -151,6 +158,9 @@ function compactCard(card: SoulCard): string {
   ];
   if (card.catchphrase !== undefined && card.catchphrase.length > 0) {
     parts.push(`catchphrase: ${card.catchphrase}`);
+  }
+  if (card.notes.length > 0) {
+    parts.push(`notes: ${card.notes}`);
   }
   // Strip control chars, then collapse whitespace so the fenced body
   // stays on one line — same convention as transcript bodies.

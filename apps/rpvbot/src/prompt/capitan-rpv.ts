@@ -162,6 +162,7 @@ export const SOUL_CARD_RESPONSE_SCHEMA = {
     quirks: { type: "array", items: { type: "string" } },
     skills: { type: "array", items: { type: "string" } },
     catchphrase: { type: "string" },
+    notes: { type: "string" },
     stats: {
       type: "object",
       properties: {
@@ -182,7 +183,7 @@ export const SOUL_CARD_RESPONSE_SCHEMA = {
       ],
     },
   },
-  required: ["title", "essence", "traits", "quirks", "skills", "stats"],
+  required: ["title", "essence", "traits", "quirks", "skills", "notes", "stats"],
 } as const;
 
 function soulRules(language: SummaryLanguage): string {
@@ -198,6 +199,7 @@ The card has these fields:
 - quirks: 1–4 short, free, imaginative quirk phrases — concrete behaviours.
 - skills: 1–5 funny RPG-style "abilities" — special powers framed like a game skill list, e.g. "Necromancy of dead group chats", "+5 to derailing any topic", "Summons screenshots from 2019". Free, imaginative, dark-fantasy flavour, and funny.
 - catchphrase: a real characteristic line they actually say, if one stands out. Omit the field entirely if none.
+- notes: a free-text running memory — looser than every field above. Use it for nuance, in-jokes, evolving situations, recurring dynamics with other members, anything that matters but doesn't fit a trait/quirk/skill slot. Evolve it like the rest of the card: fold in the new day, keep what still matters, drop what's gone stale. Keep it under ~1200 characters — it's a memory, not a transcript. Same dark-fantasy, affectionate-roast voice. It is always present (write fresh notes on the first run); it may be a short string for a near-silent member.
 - stats: six integers 1–10, each scored RELATIVE TO A NORMAL GROUP MEMBER (5 = average), from concrete behaviour:
   - verbosity: how much / how long they write.
   - humor: jokes, wit, how often they go for the laugh.
@@ -224,6 +226,7 @@ La carta tiene estos campos:
 - quirks: 1–4 manías cortas, libres, imaginativas — comportamientos concretos.
 - skills: 1–5 "habilidades" graciosas estilo RPG — poderes especiales con formato de lista de skills de videojuego, p.ej. "Nigromancia de chats de grupo muertos", "+5 a descarrilar cualquier tema", "Invoca capturas de pantalla de 2019". Libres, imaginativas, con sabor de fantasía oscura, y graciosas.
 - catchphrase: una frase característica que de verdad diga, si destaca alguna. Omite el campo entero si no hay ninguna.
+- notes: una memoria libre en texto — más suelta que todos los campos de arriba. Úsala para matices, chistes internos, situaciones que evolucionan, dinámicas recurrentes con otros miembros, cualquier cosa que importe pero no encaje en un rasgo/manía/skill. Hazla evolucionar como el resto de la carta: incorpora el día nuevo, conserva lo que siga importando, descarta lo que ya esté rancio. Mantenla por debajo de ~1200 caracteres — es una memoria, no una transcripción. Mismo tono de fantasía oscura, roast cariñoso. Siempre está presente (escribe notas nuevas en la primera ejecución); puede ser un texto corto para un miembro casi mudo.
 - stats: seis enteros 1–10, cada uno puntuado RELATIVO A UN MIEMBRO NORMAL DEL GRUPO (5 = media), a partir de comportamiento concreto:
   - verbosity: cuánto / cómo de largo escribe.
   - humor: bromas, ingenio, con qué frecuencia va a por la risa.

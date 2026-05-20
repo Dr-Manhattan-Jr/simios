@@ -7,7 +7,7 @@ Telegram bot — **Capitán RPV**, the chronicler of the group. Three features:
   - Pass a **positive integer** (max 500) to get a Capitán RPV summary of the last N messages, OR
   - Pass a **free-text question** (any other input) to get an answer grounded in the persisted chat history. The question is treated as untrusted input: the system prompt refuses prompt-extraction, infra-disclosure, and instruction-injection attempts, and the bot never invents facts beyond the transcript. Member **souls** (see below) are also injected as background context, so the bot understands who people are — but the transcript stays the source of hard facts; souls only colour the answer, never override what was actually said.
   Rate-limited: at most one fire per 60 s group-wide, and the same user can't fire more than once per 5 min. Abusers get a snarky one-liner. The bot reply-quotes the triggering `/rpv` so the answer threads under it in Telegram.
-- **Daily souls cron.** Every day at 12:00 Europe/Madrid, the bot reads yesterday's messages, groups them by member, and incrementally updates a per-member "soul" — a **dark-fantasy RPG character card**. The card has six fixed numeric stat axes (verbosity, humor, chaos, wisdom, horniness, menace, each 1–10, scored relative to a normal group member) plus free-form imaginative fields: a fantasy class `title`, an `essence`, `traits`, `quirks`, funny RPG-style `skills`, and an optional `catchphrase`. Update is `previous_card + new_messages → new_card` via Gemini structured-JSON synthesis, stored as JSON in the `rpv_souls` tab. Souls are not exposed via a command, but they ARE injected as background context into `/rpv` question answers (see above).
+- **Daily souls cron.** Every day at 12:00 Europe/Madrid, the bot reads yesterday's messages, groups them by member, and incrementally updates a per-member "soul" — a **dark-fantasy RPG character card**. The card has six fixed numeric stat axes (verbosity, humor, chaos, wisdom, horniness, menace, each 1–10, scored relative to a normal group member) plus free-form imaginative fields: a fantasy class `title`, an `essence`, `traits`, `quirks`, funny RPG-style `skills`, an optional `catchphrase`, and a free-text `notes` field — a looser, capped running memory (in-jokes, evolving context, recurring dynamics) that the rigid card slots can't hold. Update is `previous_card + new_messages → new_card` via Gemini structured-JSON synthesis, stored as JSON in the `rpv_souls` tab; every field, including `notes`, is re-synthesised (evolved, not reset) each run. Souls are not exposed via a command, but the whole card — stats, fields, and `notes` — is injected as background context into `/rpv` question answers (see above).
 
 **Language rule:** the summary/answer body is written in **Spanish on Mon–Thu and Sat–Sun**, and in **English on Fridays**, aligned with `los_piratas_bot`'s "English Friday" theme. The fixed prefix lines (`📜 Daily Resume — …`, `🧭 Unread Resume — last N messages`, `🧭 Question — …`) stay English always — they're the machine-readable contract for future "retrieve all resumes from last year" features.
 
@@ -53,8 +53,8 @@ Three tabs on the same spreadsheet as `ciclobot` and `los_piratas_bot`.
 |---------|----------|------------|-----------|------------|------------|------|
 
 - `user_id` is the table key. Updated daily by the 12:00 souls cron; members who didn't speak yesterday are skipped.
-- `soul_text` is the RPG character card as a newline-encoded JSON string (`{ title, essence, traits[], quirks[], skills[], catchphrase?, stats{...} }`). Legacy free-text souls from before the card format are simply regenerated on the next cron run.
-- `soul_chars` is the post-encoding length, hard-capped at `SOULS_MAX_CHARS` (default 3200).
+- `soul_text` is the RPG character card as a newline-encoded JSON string (`{ title, essence, traits[], quirks[], skills[], catchphrase?, notes, stats{...} }`). `notes` is a free-text running memory (capped ~1200 chars). Legacy souls from before a field was added are simply regenerated on the next cron run.
+- `soul_chars` is the post-encoding length, hard-capped at `SOULS_MAX_CHARS` (default 4500).
 - `runs` is a monotonic counter — how many times this soul has been updated.
 
 ## Hostile-input handling (/rpv questions)
@@ -85,7 +85,7 @@ User-supplied free text flowing into an LLM prompt is treated as untrusted. Two 
    - `MESSAGE_RETENTION_DAYS` — defaults to `30`.
    - `RPV_GROUP_COOLDOWN_SECONDS` — defaults to `60`.
    - `RPV_USER_COOLDOWN_SECONDS` — defaults to `300` (5 min).
-   - `SOULS_MAX_CHARS` — defaults to `3200`. Hard cap on `soul_text` (the JSON card) length (post-encoding).
+   - `SOULS_MAX_CHARS` — defaults to `4500`. Hard cap on `soul_text` (the JSON card) length (post-encoding).
    - `QUESTION_MAX_CHARS` — defaults to `400`. Cap applied to sanitised question text.
    - `QUESTION_CONTEXT_MESSAGES` — defaults to `300`. How many recent messages to feed the question prompt.
 6. **Deploy.** Railway picks up `apps/rpvbot/railway.toml`; build = Dockerfile; healthcheck = `/health`.
