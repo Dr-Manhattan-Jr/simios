@@ -4,6 +4,12 @@ import {
 } from "@simios/sheets-client";
 import type { Config } from "./config.js";
 import {
+  createTable as createImagesTable,
+  HEADER as IMAGES_HEADER,
+  TAB as IMAGES_TAB,
+  type ImagesTable,
+} from "./sheets/images.js";
+import {
   createTable as createMessagesTable,
   HEADER as MESSAGES_HEADER,
   TAB as MESSAGES_TAB,
@@ -28,6 +34,7 @@ export interface Services {
   readonly messages: MessagesTable;
   readonly summaries: SummariesTable;
   readonly souls: SoulsTable;
+  readonly images: ImagesTable;
 }
 
 export async function createServices(config: Config): Promise<Services> {
@@ -38,10 +45,12 @@ export async function createServices(config: Config): Promise<Services> {
   const messages = createMessagesTable(sheets);
   const summaries = createSummariesTable(sheets);
   const souls = createSoulsTable(sheets);
+  const images = createImagesTable(sheets);
   await Promise.all([
     sheets.ensureTab(MESSAGES_TAB, MESSAGES_HEADER),
     sheets.ensureTab(SUMMARIES_TAB, SUMMARIES_HEADER),
     sheets.ensureTab(SOULS_TAB, SOULS_HEADER),
+    sheets.ensureTab(IMAGES_TAB, IMAGES_HEADER),
   ]);
-  return { config, sheets, messages, summaries, souls };
+  return { config, sheets, messages, summaries, souls, images };
 }

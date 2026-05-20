@@ -22,6 +22,14 @@ const ResponseSchema = z.object({
  */
 export type GeminiResponseSchema = Record<string, unknown>;
 
+/** An image to send to Gemini as multimodal input. */
+export interface GeminiImage {
+  /** Base64-encoded image bytes. */
+  readonly base64: string;
+  /** e.g. "image/jpeg", "image/webp". */
+  readonly mimeType: string;
+}
+
 export interface GeminiGenerateArgs {
   readonly system: string;
   readonly user: string;
@@ -31,6 +39,9 @@ export interface GeminiGenerateArgs {
   /** When set, the model is asked to return JSON matching this schema
    * (`responseMimeType: application/json`). */
   readonly responseSchema?: GeminiResponseSchema;
+  /** When set, the image is sent alongside the text as multimodal
+   * input — Gemini 2.5 Flash describes / OCRs it. */
+  readonly image?: GeminiImage;
 }
 
 export interface GeminiTextClient {
@@ -44,13 +55,30 @@ export interface GeminiTextClient {
     readonly temperature?: number;
     readonly responseSchema: GeminiResponseSchema;
   }): Promise<unknown>;
+  /** Structured generation over an image — OCR + description. Returns
+   * parsed-but-unvalidated JSON; the caller MUST zod-validate it. */
+  describeImage(args: {
+    readonly system: string;
+    readonly user: string;
+    readonly image: GeminiImage;
+    readonly responseSchema: GeminiResponseSchema;
+    readonly temperature?: number;
+  }): Promise<unknown>;
 }
 
 // Hard cap on how long we wait for Gemini. Without this, a hung upstream
 // request would deadlock the /rpv in-flight latch forever (every
 // subsequent /rpv would snark-reply until the bot restarts), and would
-// stall the souls cron mid-loop.
+// stall the souls / ocr crons mid-loop.
 const REQUEST_TIMEOUT_MS = 60_000;
+
+interface TextPart {
+  readonly text: string;
+}
+interface InlineDataPart {
+  readonly inlineData: { readonly mimeType: string; readonly data: string };
+}
+type ContentPart = TextPart | InlineDataPart;
 
 export function createGeminiTextClient(params: {
   readonly apiKey: string;
@@ -79,6 +107,19 @@ export function createGeminiTextClient(params: {
       generationConfig["responseMimeType"] = "application/json";
       generationConfig["responseSchema"] = args.responseSchema;
     }
+    // The image part goes BEFORE the text part — Gemini's docs recommend
+    // image-then-instruction ordering.
+    const parts: ContentPart[] = [];
+    if (args.image !== undefined) {
+      parts.push({
+        inlineData: {
+          mimeType: args.image.mimeType,
+          data: args.image.base64,
+        },
+      });
+    }
+    parts.push({ text: args.user });
+
     let response: Response;
     try {
       response = await fetch(url, {
@@ -90,7 +131,7 @@ export function createGeminiTextClient(params: {
         },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: args.system }] },
-          contents: [{ role: "user", parts: [{ text: args.user }] }],
+          contents: [{ role: "user", parts }],
           generationConfig,
         }),
       });
@@ -121,8 +162,8 @@ export function createGeminiTextClient(params: {
     if (candidate === undefined) {
       throw new Error("Gemini returned no candidates");
     }
-    const parts = candidate.content?.parts ?? [];
-    const text = parts.map((p) => p.text).join("").trim();
+    const responseParts = candidate.content?.parts ?? [];
+    const text = responseParts.map((p) => p.text).join("").trim();
     const finishReason = candidate.finishReason ?? "UNKNOWN";
 
     if (finishReason !== "STOP") {
@@ -137,6 +178,17 @@ export function createGeminiTextClient(params: {
     return text;
   }
 
+  function parseJsonReply(text: string): unknown {
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(
+        `Gemini returned non-JSON despite responseSchema: ` +
+          `"${text.slice(0, 120)}${text.length > 120 ? "…" : ""}"`,
+      );
+    }
+  }
+
   return {
     generate,
     async generateJson({ system, user, temperature, responseSchema }) {
@@ -146,15 +198,17 @@ export function createGeminiTextClient(params: {
         responseSchema,
         ...(temperature !== undefined ? { temperature } : {}),
       };
-      const text = await generate(args);
-      try {
-        return JSON.parse(text);
-      } catch {
-        throw new Error(
-          `Gemini returned non-JSON despite responseSchema: ` +
-            `"${text.slice(0, 120)}${text.length > 120 ? "…" : ""}"`,
-        );
-      }
+      return parseJsonReply(await generate(args));
+    },
+    async describeImage({ system, user, image, responseSchema, temperature }) {
+      const args: GeminiGenerateArgs = {
+        system,
+        user,
+        image,
+        responseSchema,
+        ...(temperature !== undefined ? { temperature } : {}),
+      };
+      return parseJsonReply(await generate(args));
     },
   };
 }

@@ -3,6 +3,8 @@ import { ServiceAccountCredentialsSchema } from "@simios/sheets-client";
 import { z } from "zod";
 import {
   MESSAGE_RETENTION_DAYS,
+  OCR_MAX_IMAGE_BYTES,
+  OCR_MAX_PER_RUN,
   QUESTION_CONTEXT_MESSAGES,
   QUESTION_MAX_CHARS,
   RPV_GROUP_COOLDOWN_SECONDS,
@@ -26,6 +28,7 @@ const RawEnvSchema = z.object({
   DAILY_RESUME_CRON: NonEmptyString.default("0 9 * * *"),
   SOULS_CRON: NonEmptyString.default("0 12 * * *"),
   PRUNE_CRON: NonEmptyString.default("0 3 * * *"),
+  OCR_CRON: NonEmptyString.default("0 * * * *"),
   RPV_MAX_N: z.coerce.number().int().positive().default(RPV_MAX_N),
   MESSAGE_RETENTION_DAYS: z.coerce
     .number()
@@ -57,6 +60,16 @@ const RawEnvSchema = z.object({
     .int()
     .positive()
     .default(QUESTION_CONTEXT_MESSAGES),
+  OCR_MAX_PER_RUN: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(OCR_MAX_PER_RUN),
+  OCR_MAX_IMAGE_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(OCR_MAX_IMAGE_BYTES),
 });
 
 const ConfigSchema = RawEnvSchema.transform((raw) => ({
@@ -70,6 +83,7 @@ const ConfigSchema = RawEnvSchema.transform((raw) => ({
   dailyResumeCron: raw.DAILY_RESUME_CRON,
   soulsCron: raw.SOULS_CRON,
   pruneCron: raw.PRUNE_CRON,
+  ocrCron: raw.OCR_CRON,
   rpvMaxN: raw.RPV_MAX_N,
   messageRetentionDays: raw.MESSAGE_RETENTION_DAYS,
   rpvGroupCooldownSeconds: raw.RPV_GROUP_COOLDOWN_SECONDS,
@@ -77,6 +91,8 @@ const ConfigSchema = RawEnvSchema.transform((raw) => ({
   soulsMaxChars: raw.SOULS_MAX_CHARS,
   questionMaxChars: raw.QUESTION_MAX_CHARS,
   questionContextMessages: raw.QUESTION_CONTEXT_MESSAGES,
+  ocrMaxPerRun: raw.OCR_MAX_PER_RUN,
+  ocrMaxImageBytes: raw.OCR_MAX_IMAGE_BYTES,
 }));
 export type Config = z.infer<typeof ConfigSchema>;
 

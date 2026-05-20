@@ -18,3 +18,13 @@ export const NOTES_MAX_CHARS = 1200;
 export const SOULS_MAX_CHARS = 4500;
 export const QUESTION_MAX_CHARS = 400;
 export const QUESTION_CONTEXT_MESSAGES = 300;
+
+// OCR / image-description defaults. The cron downloads shared images and
+// runs them through Gemini vision; these bound its work per run.
+export const OCR_MAX_PER_RUN = 20;
+// 4 MB — the largest photo resolution under this is downloaded; bigger
+// ones are skipped. Static stickers are tiny .webp, always well under.
+export const OCR_MAX_IMAGE_BYTES = 4_194_304;
+// After this many failed download/describe attempts an image is left
+// `failed` and never retried. Fixed constant (small, never changes).
+export const MAX_OCR_ATTEMPTS = 3;
