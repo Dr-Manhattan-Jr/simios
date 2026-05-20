@@ -142,42 +142,112 @@ export function buildQuestionPrompt(args: QuestionPromptArgs): string {
 }
 
 // ─── Soul mode (12:00 daily cron, internal, not user-triggered) ────────
+//
+// Souls are now structured dark-fantasy RPG character cards. The cron
+// asks Gemini for JSON matching SOUL_CARD_RESPONSE_SCHEMA; the result is
+// zod-validated against SoulCardSchema before storage.
 
-function soulRules(language: SummaryLanguage, maxChars: number): string {
+/**
+ * Gemini responseSchema for a soul card — a JSON-Schema-ish object that
+ * constrains the model's output. NOT a zod schema; the zod SoulCardSchema
+ * in domain/soul.ts remains the validation source of truth. Kept in sync
+ * with it by hand (small, explicit, rarely changes).
+ */
+export const SOUL_CARD_RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    essence: { type: "string" },
+    traits: { type: "array", items: { type: "string" } },
+    quirks: { type: "array", items: { type: "string" } },
+    skills: { type: "array", items: { type: "string" } },
+    catchphrase: { type: "string" },
+    stats: {
+      type: "object",
+      properties: {
+        verbosity: { type: "integer" },
+        humor: { type: "integer" },
+        chaos: { type: "integer" },
+        wisdom: { type: "integer" },
+        horniness: { type: "integer" },
+        menace: { type: "integer" },
+      },
+      required: [
+        "verbosity",
+        "humor",
+        "chaos",
+        "wisdom",
+        "horniness",
+        "menace",
+      ],
+    },
+  },
+  required: ["title", "essence", "traits", "quirks", "skills", "stats"],
+} as const;
+
+function soulRules(language: SummaryLanguage): string {
   if (language === "en") {
-    return `You are Capitán RPV, observing one member of a small group of friends. You maintain a short profile of who they are: how they talk, what they care about, their humor, recurring topics, quirks. The profile must read like a wry one-paragraph character sketch by a friend who's watched them for a while, not a CV.
+    return `You are Capitán RPV. You maintain a dark-fantasy RPG character card for one member of a small group of friends, built only from their chat messages and their previous card.
 
-You will be given the existing profile and a transcript of the member's messages from one day. Update the profile to fold in the new evidence. Keep what is still true, prune what no longer fits, add what is new. Don't list every message — synthesise.
+You will be given the member's previous card (as JSON, or "(no card yet)" on the first run) and a transcript of their messages from one day. Evolve the card to fold in the new evidence. Keep what still holds, retire what no longer fits, add what is new. Don't list every message — synthesise.
+
+The card has these fields:
+- title: an evocative dark-fantasy "class" name for this person, e.g. "The Midnight Architect", "The Grinning Gargoyle". In English.
+- essence: 1–2 sentences capturing who they are.
+- traits: 2–5 short, free, imaginative trait phrases — specific to this person, dark-fantasy flavour welcome. NOT a fixed vocabulary; invent vivid ones.
+- quirks: 1–4 short, free, imaginative quirk phrases — concrete behaviours.
+- skills: 1–5 funny RPG-style "abilities" — special powers framed like a game skill list, e.g. "Necromancy of dead group chats", "+5 to derailing any topic", "Summons screenshots from 2019". Free, imaginative, dark-fantasy flavour, and funny.
+- catchphrase: a real characteristic line they actually say, if one stands out. Omit the field entirely if none.
+- stats: six integers 1–10, each scored RELATIVE TO A NORMAL GROUP MEMBER (5 = average), from concrete behaviour:
+  - verbosity: how much / how long they write.
+  - humor: jokes, wit, how often they go for the laugh.
+  - chaos: derailing threads, cursed takes, unpredictability.
+  - wisdom: genuinely sharp, sage contributions.
+  - horniness: how much they steer things toward the horny — comedic, light, never explicit.
+  - menace: how threatening, unhinged, feral their energy is.
 
 Hard rules:
-- Max ${String(maxChars)} characters. Be ruthless; the cap is not a target. If existing + new is shaping up too long, drop the weakest old traits.
-- Plain language. No cosmic metaphors. No "soul" jargon. No "this user…", just describe them by name/handle.
-- NEVER invent facts not present in the transcript or the existing profile.
-- Output ONLY the updated profile text — no preamble, no "Here is the updated profile:".
-- Write in English.`;
+- Tone: dark-fantasy, wry, an AFFECTIONATE roast — cheeky, never cruel.
+- NEVER invent facts not present in the transcript or the previous card.
+- Stats evolve gradually — one day of chat rarely moves a stat by more than 1–2 points. Don't swing wildly.
+- Output ONLY the JSON card. No preamble, no markdown fences, no commentary.
+- All text fields in English.`;
   }
-  return `Eres Capitán RPV, observando a un miembro de un grupo pequeño de amigos. Mantienes un perfil corto de quién es: cómo habla, qué le importa, su humor, temas recurrentes, manías. El perfil debe leerse como un retrato de un párrafo, seco, escrito por un amigo que lo ha observado un tiempo — no un CV.
+  return `Eres Capitán RPV. Mantienes una carta de personaje de RPG de fantasía oscura para un miembro de un grupo pequeño de amigos, construida solo a partir de sus mensajes de chat y su carta anterior.
 
-Te darán el perfil existente y la transcripción de los mensajes del miembro de un día. Actualiza el perfil para incorporar la nueva evidencia. Conserva lo que siga siendo cierto, descarta lo que ya no encaje, añade lo nuevo. No enumeres cada mensaje — sintetiza.
+Te darán la carta anterior del miembro (como JSON, o "(sin carta todavía)" en la primera ejecución) y la transcripción de sus mensajes de un día. Haz evolucionar la carta para incorporar la nueva evidencia. Conserva lo que siga siendo cierto, retira lo que ya no encaje, añade lo nuevo. No enumeres cada mensaje — sintetiza.
+
+La carta tiene estos campos:
+- title: un nombre de "clase" evocador de fantasía oscura para esta persona, p.ej. "El Arquitecto de la Medianoche", "La Gárgola Risueña". En español.
+- essence: 1–2 frases que capturen quién es.
+- traits: 2–5 rasgos cortos, libres, imaginativos — específicos de esta persona, con sabor de fantasía oscura. NO un vocabulario fijo; invéntalos vívidos.
+- quirks: 1–4 manías cortas, libres, imaginativas — comportamientos concretos.
+- skills: 1–5 "habilidades" graciosas estilo RPG — poderes especiales con formato de lista de skills de videojuego, p.ej. "Nigromancia de chats de grupo muertos", "+5 a descarrilar cualquier tema", "Invoca capturas de pantalla de 2019". Libres, imaginativas, con sabor de fantasía oscura, y graciosas.
+- catchphrase: una frase característica que de verdad diga, si destaca alguna. Omite el campo entero si no hay ninguna.
+- stats: seis enteros 1–10, cada uno puntuado RELATIVO A UN MIEMBRO NORMAL DEL GRUPO (5 = media), a partir de comportamiento concreto:
+  - verbosity: cuánto / cómo de largo escribe.
+  - humor: bromas, ingenio, con qué frecuencia va a por la risa.
+  - chaos: descarrilar hilos, tomas cursed, imprevisibilidad.
+  - wisdom: aportaciones genuinamente agudas, sabias.
+  - horniness: cuánto lleva las cosas hacia lo salido — cómico, ligero, nunca explícito.
+  - menace: cómo de amenazante, perturbada, feral es su energía.
 
 Reglas duras:
-- Máximo ${String(maxChars)} caracteres. Sé despiadado; el tope no es un objetivo. Si existente + nuevo se va de largo, tira los rasgos viejos más débiles.
-- Lenguaje llano. Nada de metáforas cósmicas. Nada de jerga de "alma". Nada de "este usuario…"; descríbelo por nombre/handle.
-- NUNCA inventes hechos que no estén en la transcripción o en el perfil existente.
-- Devuelve SOLO el texto del perfil actualizado — sin preámbulo, sin "Aquí está el perfil actualizado:".
-- Escribe en español.`;
+- Tono: fantasía oscura, seco, un roast CARIÑOSO — pícaro, nunca cruel.
+- NUNCA inventes hechos que no estén en la transcripción o en la carta anterior.
+- Las stats evolucionan gradualmente — un día de chat raramente mueve una stat más de 1–2 puntos. No des bandazos.
+- Devuelve SOLO la carta JSON. Sin preámbulo, sin bloques markdown, sin comentarios.
+- Todos los campos de texto en español.`;
 }
 
-export function systemPromptForSoul(
-  language: SummaryLanguage,
-  maxChars: number,
-): string {
-  return soulRules(language, maxChars);
+export function systemPromptForSoul(language: SummaryLanguage): string {
+  return soulRules(language);
 }
 
 interface SoulPromptArgs {
   readonly memberLabel: string;
-  readonly currentSoul: string;
+  /** The member's previous card as a JSON string, or "" on first run. */
+  readonly currentCardJson: string;
   readonly transcript: string;
   readonly language: SummaryLanguage;
 }
@@ -186,15 +256,17 @@ export function buildSoulPrompt(args: SoulPromptArgs): string {
   const memberHeader = args.language === "en" ? "Member:" : "Miembro:";
   const existingHeader =
     args.language === "en"
-      ? "Existing profile (may be empty on first run):"
-      : "Perfil existente (puede estar vacío en la primera ejecución):";
+      ? "Previous card (JSON; may be absent on first run):"
+      : "Carta anterior (JSON; puede no existir en la primera ejecución):";
   const transcriptHeader =
     args.language === "en"
       ? "Yesterday's messages from this member:"
       : "Mensajes de ayer de este miembro:";
   const emptyPlaceholder =
-    args.language === "en" ? "(no profile yet)" : "(sin perfil todavía)";
+    args.language === "en" ? "(no card yet)" : "(sin carta todavía)";
   const currentBlock =
-    args.currentSoul.trim().length === 0 ? emptyPlaceholder : args.currentSoul;
+    args.currentCardJson.trim().length === 0
+      ? emptyPlaceholder
+      : args.currentCardJson;
   return `${memberHeader} ${args.memberLabel}\n\n${existingHeader}\n${currentBlock}\n\n${transcriptHeader}\n${args.transcript}`;
 }

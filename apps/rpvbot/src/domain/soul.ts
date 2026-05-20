@@ -1,32 +1,95 @@
 import { z } from "zod";
 import { fenceBody } from "./fence.js";
 import { decodeNewlines, type MessageRecord } from "./message.js";
+import { stripControlChars } from "./sanitise.js";
+
+/**
+ * Six fixed numeric stat axes, each scored 1–10 relative to a normal
+ * group member (5 = average). Fixed and shared across every member's
+ * card — this is the "common ground" that makes cards comparable.
+ */
+export const SoulStatsSchema = z.object({
+  verbosity: z.number().int().min(1).max(10),
+  humor: z.number().int().min(1).max(10),
+  chaos: z.number().int().min(1).max(10),
+  wisdom: z.number().int().min(1).max(10),
+  horniness: z.number().int().min(1).max(10),
+  menace: z.number().int().min(1).max(10),
+});
+export type SoulStats = z.infer<typeof SoulStatsSchema>;
+
+/**
+ * A member's soul, as a dark-fantasy RPG character card. The numeric
+ * stats are the fixed shared axes; title / traits / quirks are free,
+ * imaginative, person-specific text the souls cron writes from chat.
+ */
+export const SoulCardSchema = z.object({
+  // Dark-fantasy class title, e.g. "El Arquitecto de la Medianoche".
+  title: z.string().min(1).max(80),
+  // 1–2 sentence personality essence.
+  essence: z.string().min(1).max(400),
+  // Free, imaginative trait phrases.
+  traits: z.array(z.string().min(1).max(120)).min(1).max(5),
+  // Free, imaginative quirk phrases.
+  quirks: z.array(z.string().min(1).max(160)).min(1).max(4),
+  // Funny RPG-style "abilities" / special skills, e.g. "Necromancy of
+  // dead group chats", "+5 to procrastination". Free and imaginative.
+  skills: z.array(z.string().min(1).max(140)).min(1).max(5),
+  // A characteristic line/catchphrase — not everyone has one.
+  catchphrase: z.string().max(200).optional(),
+  stats: SoulStatsSchema,
+});
+export type SoulCard = z.infer<typeof SoulCardSchema>;
 
 /**
  * One row per group member with at least one stored message. Updated
  * daily at 12:00 Madrid by the souls cron, which folds the previous
- * day's messages from this user into the existing soul_text via Gemini.
+ * day's messages from this user into the existing card via Gemini.
  *
  * Stored on the `rpv_souls` tab. Keyed on user_id so updates are upsert
  * in place — total storage is bounded by the member count, not by time.
+ *
+ * `soul_text` holds the card as a newline-encoded JSON string. Legacy
+ * rows from before the card format hold free prose; parseSoulCard
+ * returns null for those and the cron regenerates them.
  */
 export const SoulRecordSchema = z.object({
   user_id: z.number().int(),
   username: z.string().optional(),
   first_name: z.string().min(1),
-  // Newlines encoded as the literal `\n` two-char sequence so the soul
-  // fits in one Sheets cell. Reuses encodeNewlines/decodeNewlines from
-  // domain/message.ts.
   soul_text: z.string(),
-  // Denormalised length of soul_text (post-truncation, post-encoding) so
-  // monitoring the cap is a single column read instead of a string scan.
+  // Denormalised length of soul_text (post-encoding) so monitoring the
+  // cap is a single column read instead of a string scan.
   soul_chars: z.number().int().nonnegative(),
   updated_at: z.string().min(1),
-  // Monotonic counter — helps spot members who go silent (runs stops
-  // incrementing) without computing it from updated_at deltas.
+  // Monotonic counter — helps spot members who go silent.
   runs: z.number().int().nonnegative(),
 });
 export type SoulRecord = z.infer<typeof SoulRecordSchema>;
+
+/**
+ * Decode a stored `soul_text` cell into a SoulCard. Returns null for
+ * anything that isn't a valid card — legacy free-text souls, malformed
+ * or truncated JSON. A null result means "no usable card": the cron
+ * treats the member as having no prior card and regenerates one.
+ */
+export function parseSoulCard(soulText: string): SoulCard | null {
+  const decoded = decodeNewlines(soulText).trim();
+  if (decoded.length === 0) return null;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+  const parsed = SoulCardSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+/** Serialise a card for storage in the `soul_text` cell. */
+export function serialiseSoulCard(card: SoulCard): string {
+  return JSON.stringify(card);
+}
 
 /**
  * Group messages that fall inside `window` by user_id, preserving
@@ -66,39 +129,73 @@ function soulLabel(s: SoulRecord): string {
 }
 
 /**
- * Render all member souls into a plain text block for the /rpv question
- * prompt — one member per line, "Name (@handle): <msg>profile text</msg>".
- * Sorted by first_name for deterministic output. Returns "" for an empty
- * list, so the prompt builder can omit the section entirely.
- *
- * The profile text is fenced in <msg>…</msg> (same mechanism as
- * transcript message bodies): a member can influence their own soul over
- * time by what they type, so fencing keeps an injection-shaped soul from
- * forging prompt structure. soul_text is stored newline-encoded; we
- * decode it and collapse internal whitespace so each member stays on one
- * line.
+ * Compact, single-line text form of a card for the question prompt. All
+ * the card's text fields are member-influenced (a member shapes their
+ * own card over time), so strip control chars — zero-width spaces, bidi
+ * overrides — before interpolating, on top of the <msg> fence the caller
+ * adds.
  */
-export function renderSouls(souls: readonly SoulRecord[]): string {
-  if (souls.length === 0) return "";
-  return [...souls]
-    .sort((a, b) => a.first_name.localeCompare(b.first_name))
-    .map((s) => {
-      const profile = decodeNewlines(s.soul_text).replace(/\s+/g, " ").trim();
-      return `${soulLabel(s)}: ${fenceBody(profile)}`;
-    })
-    .join("\n");
+function compactCard(card: SoulCard): string {
+  const s = card.stats;
+  const statsLine =
+    `stats: verbosity ${String(s.verbosity)}, humor ${String(s.humor)}, ` +
+    `chaos ${String(s.chaos)}, wisdom ${String(s.wisdom)}, ` +
+    `horniness ${String(s.horniness)}, menace ${String(s.menace)}`;
+  const parts = [
+    `class: ${card.title}`,
+    statsLine,
+    `essence: ${card.essence}`,
+    `traits: ${card.traits.join("; ")}`,
+    `quirks: ${card.quirks.join("; ")}`,
+    `skills: ${card.skills.join("; ")}`,
+  ];
+  if (card.catchphrase !== undefined && card.catchphrase.length > 0) {
+    parts.push(`catchphrase: ${card.catchphrase}`);
+  }
+  // Strip control chars, then collapse whitespace so the fenced body
+  // stays on one line — same convention as transcript bodies.
+  return stripControlChars(parts.join(" | ")).replace(/\s+/g, " ").trim();
 }
 
 /**
- * Truncate a soul to `maxChars` code points (not UTF-16 code units), so
- * emoji and combining marks are never split mid-character. The "…" suffix
- * is included in the cap so the final string is exactly maxChars long.
+ * Render all member souls into a text block for the /rpv question
+ * prompt. Each member is two lines — a "Name (@handle) — Title" header,
+ * then the card's compact form fenced in <msg>…</msg>. Returns "" for an
+ * empty list, or when no soul parses as a card (legacy free-text rows
+ * are skipped — the question is still answered transcript-only).
+ *
+ * The fence keeps an injection-shaped card (a member can influence their
+ * own card over time) from forging prompt structure — same defence as
+ * transcript message bodies.
+ */
+export function renderSouls(souls: readonly SoulRecord[]): string {
+  const blocks: string[] = [];
+  for (const s of [...souls].sort((a, b) =>
+    a.first_name.localeCompare(b.first_name),
+  )) {
+    const card = parseSoulCard(s.soul_text);
+    if (card === null) continue;
+    // The title sits OUTSIDE the <msg> fence in the header line, so it
+    // can't rely on fenceBody — strip control chars and collapse
+    // whitespace so a member-steered title can't inject newlines or
+    // fake structure. The fenced compactCard carries the title too.
+    const safeTitle = stripControlChars(card.title).replace(/\s+/g, " ").trim();
+    blocks.push(
+      `${soulLabel(s)} — ${safeTitle}\n${fenceBody(compactCard(card))}`,
+    );
+  }
+  return blocks.join("\n");
+}
+
+/**
+ * Truncate a string to `maxChars` code points (not UTF-16 code units),
+ * so emoji and combining marks are never split mid-character. The "…"
+ * suffix is included in the cap.
  */
 export function capSoul(text: string, maxChars: number): string {
   if (maxChars <= 0) return "";
   const codepoints = Array.from(text);
   if (codepoints.length <= maxChars) return text;
-  // Reserve room for the ellipsis suffix.
   const headLen = Math.max(0, maxChars - 1);
   return codepoints.slice(0, headLen).join("").trimEnd() + "…";
 }
