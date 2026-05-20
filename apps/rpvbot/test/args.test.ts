@@ -78,4 +78,37 @@ describe("parseRpvArgs", () => {
     assert.equal(r.ok, false);
     if (!r.ok) assert.match(r.error, /positive integer/);
   });
+
+  it("array-shaped junk [100000000000] is rejected, not treated as a question", () => {
+    const r = parseRpvArgs("/rpv [100000000000]", OPTS);
+    assert.equal(r.ok, false);
+    if (!r.ok) assert.match(r.error, /positive integer/);
+  });
+
+  it("brace-wrapped junk {123} is rejected", () => {
+    const r = parseRpvArgs("/rpv {123}", OPTS);
+    assert.equal(r.ok, false);
+  });
+
+  it("comma-separated number list is rejected", () => {
+    const r = parseRpvArgs("/rpv 1,2,3", OPTS);
+    assert.equal(r.ok, false);
+  });
+
+  it("bracketed comma list [1, 2, 3] is rejected", () => {
+    const r = parseRpvArgs("/rpv [1, 2, 3]", OPTS);
+    assert.equal(r.ok, false);
+  });
+
+  it("a question that happens to mention a number is still a question", () => {
+    const r = parseRpvArgs("/rpv what happened with the 100 dollars?", OPTS);
+    assert.equal(r.ok, true);
+    if (r.ok) assert.equal(r.kind, "question");
+  });
+
+  it("a question wrapped in brackets but containing words is still a question", () => {
+    const r = parseRpvArgs("/rpv [who said hi?]", OPTS);
+    assert.equal(r.ok, true);
+    if (r.ok) assert.equal(r.kind, "question");
+  });
 });

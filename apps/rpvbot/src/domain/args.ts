@@ -57,6 +57,18 @@ export function parseRpvArgs(text: string, opts: ParseOpts): ParsedArgs {
     return { ok: false, error: "N must be a positive integer." };
   }
 
+  // Reject "numeric junk" — bracket/brace/paren-wrapped content, or
+  // strings made only of digits and separators (commas, brackets,
+  // dots, whitespace) with no actual letters. These are people poking
+  // at the bot with array-shaped inputs like "[100000000000]" or
+  // "1,2,3"; treating them as free-text questions produces a confusing
+  // nonsense answer. A real question always contains letters.
+  const hasLetter = /\p{L}/u.test(afterCommand);
+  const isBracketWrapped = /^[[({].*[\])}]$/.test(afterCommand);
+  if (!hasLetter && (isBracketWrapped || /^[\d\s.,;[\](){}-]+$/.test(afterCommand))) {
+    return { ok: false, error: "N must be a positive integer." };
+  }
+
   // Everything else is treated as a question. Sanitiser caps length
   // and strips control chars; semantic defence lives in the system
   // prompt downstream.
