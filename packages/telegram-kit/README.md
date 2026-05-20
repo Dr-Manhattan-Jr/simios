@@ -40,7 +40,12 @@ await startBotWith409Retry(bot, {
 });
 ```
 
-Defaults: 120s deadline, 3s retry delay. Resolves on graceful stop; throws the original error on any non-409 failure.
+Two 409 phases are handled differently:
+
+- **Cold start** — before the bot ever polls successfully, a 409 is retried only until `deadlineMs` (default 120s). If the token can't be taken at all within that window, the error is thrown (fatal).
+- **Post-start** — once `onStart` has fired (the first `getUpdates` succeeded), a later 409 is retried **indefinitely**. A running long-poll bot that briefly loses its token must keep trying, not crash — otherwise a transient mid-run 409 kills the process, Railway restarts it, the fresh process races the dying one, and the bot enters a permanent crash loop.
+
+The retry delay carries ±50% jitter so two racing containers desynchronise and one wins the token cleanly. Defaults: 120s cold-start deadline, 3s base retry delay. Resolves on graceful stop; throws on any non-409 failure.
 
 ### `startHealthServer({ port?, isHealthy }) → http.Server`
 

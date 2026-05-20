@@ -114,15 +114,33 @@ function isConflict409(err: unknown): boolean {
 
 /**
  * Start a grammY bot's long poll, retrying when Telegram returns 409
- * (another consumer of getUpdates owns this token). Rolling deploys
- * always race the new container against the old one for the poll —
- * without retry, the new container would die instantly and Railway
- * never tears the old one down. We keep trying until the previous
- * owner gives up (or until `deadlineMs` elapses, in which case the
- * error bubbles up to the fatal-409 handler).
+ * (another consumer of getUpdates owns this token).
  *
- * Resolves only on graceful stop. Throws the original error on any
- * non-409 failure, or the most recent 409 after the deadline.
+ * There are two distinct 409 situations and they need different
+ * handling:
+ *
+ *  1. COLD-START RACE — a rolling deploy briefly runs the new container
+ *     alongside the draining old one. The new one must retry until the
+ *     old one lets go. We bound this with `deadlineMs`: if we can't get
+ *     the poll at all within that window, something is genuinely wrong
+ *     and the error bubbles to the fatal handler.
+ *
+ *  2. MID-RUN 409 — the bot polled fine for a while (`onStart` already
+ *     fired), then `getUpdates` 409'd because another consumer grabbed
+ *     the token mid-run. The OLD design counted this against the same
+ *     deadline measured from process start, so a transient 409 after
+ *     ~2min of uptime threw fatal → process exit → Railway restart →
+ *     the fresh process races the dying one → another 409 → a permanent
+ *     crash loop. A long-poll bot that loses its token should simply
+ *     keep trying, not die. So once we've successfully started at least
+ *     once, 409s are retried indefinitely — the deadline no longer
+ *     applies.
+ *
+ * Retry delay carries jitter so two racing containers desynchronise and
+ * one wins the token cleanly, instead of ping-ponging in lockstep.
+ *
+ * Resolves only on graceful stop. Throws on any non-409 failure, or on
+ * a 409 that persists past `deadlineMs` *before the bot ever started*.
  */
 export async function startBotWith409Retry<C extends Context>(
   bot: Bot<C>,
@@ -137,21 +155,38 @@ export async function startBotWith409Retry<C extends Context>(
   const retryDelayMs = args.retryDelayMs ?? 3_000;
   const label = args.label ?? "bot";
   const start = Date.now();
-  let lastErr: unknown;
-  while (Date.now() - start < deadlineMs) {
+  // Flips true the first time bot.start()'s onStart fires — i.e. the
+  // first getUpdates succeeded. After that the cold-start deadline no
+  // longer applies; 409s are retried forever.
+  let everStarted = false;
+  const markStarted = (): void => {
+    everStarted = true;
+    args.onStart();
+  };
+
+  for (;;) {
     try {
-      await bot.start({ onStart: args.onStart });
+      await bot.start({ onStart: markStarted });
       return;
     } catch (err: unknown) {
-      lastErr = err;
       if (!isConflict409(err)) throw err;
+      // Before the first successful start, a 409 that outlasts the
+      // deadline is fatal — we never managed to take the token at all.
+      if (!everStarted && Date.now() - start >= deadlineMs) {
+        throw err;
+      }
+      // Jittered delay: ±50% so racing containers desync.
+      const jittered = Math.round(
+        retryDelayMs * (0.5 + Math.random()),
+      );
+      const phase = everStarted ? "post-start" : "cold-start";
       const waited = Math.round((Date.now() - start) / 1000);
       console.log(
         `${label}: 409 from Telegram (another consumer holds the token), ` +
-          `retrying in ${String(retryDelayMs / 1000)}s (waited ${String(waited)}s so far)`,
+          `${phase} retry in ${String(Math.round(jittered / 1000))}s ` +
+          `(waited ${String(waited)}s so far)`,
       );
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      await new Promise((resolve) => setTimeout(resolve, jittered));
     }
   }
-  throw lastErr;
 }
