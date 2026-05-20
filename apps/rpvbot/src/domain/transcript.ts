@@ -1,5 +1,5 @@
 import { format } from "date-fns-tz";
-import { MESSAGE_FENCE_CLOSE, MESSAGE_FENCE_OPEN } from "./fence.js";
+import { fenceBody } from "./fence.js";
 import { type MessageRecord } from "./message.js";
 
 /**
@@ -17,18 +17,6 @@ import { type MessageRecord } from "./message.js";
  * cannot impersonate a transcript header. The persona system prompts
  * tell the model to treat anything inside `<msg>…</msg>` as data.
  */
-
-function safeBody(rawEncodedText: string): string {
-  // The sheet stores text with newlines as the literal `\n` two-char
-  // sequence (encodeNewlines). For the transcript we want EXACTLY that
-  // — no real newlines — so the body fits on one line. Skip the usual
-  // decodeNewlines step on purpose.
-  // Also rewrite any literal fence tokens a user typed, so the fence
-  // stays parser-stable for the model.
-  return rawEncodedText
-    .replaceAll(MESSAGE_FENCE_OPEN, "<​msg>")
-    .replaceAll(MESSAGE_FENCE_CLOSE, "</​msg>");
-}
 
 export function renderTranscript(
   messages: readonly MessageRecord[],
@@ -58,8 +46,12 @@ export function renderTranscript(
           replyTag = ` [↩ to ${replyName}]`;
         }
       }
-      const body = safeBody(m.text);
-      return `[${wallClock}] ${handle}${replyTag}: ${MESSAGE_FENCE_OPEN}${body}${MESSAGE_FENCE_CLOSE}`;
+      // The sheet stores text with newlines as the literal `\n` two-char
+      // sequence (encodeNewlines). For the transcript we want EXACTLY
+      // that — no real newlines — so the body fits on one line. Skip the
+      // usual decodeNewlines step on purpose. fenceBody escapes any
+      // literal fence tokens so the <msg> fence stays parser-stable.
+      return `[${wallClock}] ${handle}${replyTag}: ${fenceBody(m.text)}`;
     })
     .join("\n");
 }

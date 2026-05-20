@@ -6,6 +6,7 @@ import type { Cooldown, UserCooldown } from "../domain/cooldown.js";
 import { summaryLanguage, type SummaryLanguage } from "../domain/day.js";
 import type { MessageRecord } from "../domain/message.js";
 import { encodeNewlines } from "../domain/message.js";
+import { renderSouls } from "../domain/soul.js";
 import { snarkWithCooldown } from "../domain/snark.js";
 import type { SummaryRecord } from "../domain/summary.js";
 import { renderTranscript } from "../domain/transcript.js";
@@ -136,7 +137,18 @@ async function handleQuestion(
   deps: RpvDeps,
   language: SummaryLanguage,
 ): Promise<void> {
-  const all = await deps.services.messages.listAll();
+  // Souls are fetched in parallel — they give the model background on
+  // who each member is, while the transcript stays the source of hard
+  // facts. Group is small, so all souls are injected every question.
+  // Souls are best-effort: a transient rpv_souls read error degrades to
+  // a transcript-only answer rather than failing the whole question.
+  const [all, allSouls] = await Promise.all([
+    deps.services.messages.listAll(),
+    deps.services.souls.listAll().catch((err: unknown) => {
+      console.error("rpvbot: souls read failed, answering without them:", err);
+      return [];
+    }),
+  ]);
   // Bound the context window: questions don't need 30 days of chat to
   // answer, and the token budget for one /rpv call is finite. The user
   // can always /rpv N for a literal summary.
@@ -149,6 +161,7 @@ async function handleQuestion(
   }
 
   const transcript = renderTranscript(tail, deps.config.timeZone);
+  const souls = renderSouls(allSouls);
   // Lower temperature than summary mode: factual answering, not creative
   // storytelling. We want grounded, short, and confident-or-refuse.
   const answer = await deps.gemini.generate({
@@ -156,6 +169,7 @@ async function handleQuestion(
     user: buildQuestionPrompt({
       question: parsed.text,
       transcript,
+      souls,
       language,
     }),
     temperature: 0.3,

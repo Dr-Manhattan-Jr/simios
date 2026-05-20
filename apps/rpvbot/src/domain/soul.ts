@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { MessageRecord } from "./message.js";
+import { fenceBody } from "./fence.js";
+import { decodeNewlines, type MessageRecord } from "./message.js";
 
 /**
  * One row per group member with at least one stored message. Updated
@@ -48,6 +49,44 @@ export function groupMessagesByUser(
     byUser.set(m.user_id, arr);
   }
   return byUser;
+}
+
+/**
+ * Member label for a soul. Members are most often referred to by their
+ * @handle in questions ("what is @vidal like?"), so the handle must be
+ * front and centre when present. Format: "Josep (@vidal)" — name then
+ * handle. When a member has no public username, say so explicitly so
+ * the model doesn't treat the absence as meaningful.
+ */
+function soulLabel(s: SoulRecord): string {
+  if (s.username !== undefined && s.username.length > 0) {
+    return `${s.first_name} (@${s.username})`;
+  }
+  return `${s.first_name} (no @handle)`;
+}
+
+/**
+ * Render all member souls into a plain text block for the /rpv question
+ * prompt — one member per line, "Name (@handle): <msg>profile text</msg>".
+ * Sorted by first_name for deterministic output. Returns "" for an empty
+ * list, so the prompt builder can omit the section entirely.
+ *
+ * The profile text is fenced in <msg>…</msg> (same mechanism as
+ * transcript message bodies): a member can influence their own soul over
+ * time by what they type, so fencing keeps an injection-shaped soul from
+ * forging prompt structure. soul_text is stored newline-encoded; we
+ * decode it and collapse internal whitespace so each member stays on one
+ * line.
+ */
+export function renderSouls(souls: readonly SoulRecord[]): string {
+  if (souls.length === 0) return "";
+  return [...souls]
+    .sort((a, b) => a.first_name.localeCompare(b.first_name))
+    .map((s) => {
+      const profile = decodeNewlines(s.soul_text).replace(/\s+/g, " ").trim();
+      return `${soulLabel(s)}: ${fenceBody(profile)}`;
+    })
+    .join("\n");
 }
 
 /**
