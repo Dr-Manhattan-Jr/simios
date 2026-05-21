@@ -46,6 +46,33 @@ describe("systemPromptForSoul (RPG card)", () => {
   it("tells the model stats evolve gradually", () => {
     assert.match(systemPromptForSoul("en"), /1.2 points|gradually/i);
   });
+
+  it("bans the overused essence openers", () => {
+    // "A pragmatic soul" / "Un alma pragmática" appeared verbatim in 3
+    // live cards — the prompt must explicitly forbid the template.
+    assert.match(systemPromptForSoul("en"), /NEVER begin with/i);
+    assert.match(systemPromptForSoul("es"), /NUNCA empieces con.*Un alma/i);
+  });
+
+  it("bans the overused title moulds", () => {
+    assert.match(systemPromptForSoul("es"), /El Inquisidor|El Oráculo|El Cronista/);
+    assert.match(systemPromptForSoul("en"), /do NOT default to/i);
+  });
+
+  it("warns off the repeated Necromancy skill", () => {
+    assert.match(systemPromptForSoul("en"), /Necromancy/i);
+    assert.match(systemPromptForSoul("es"), /Nigromancia/i);
+  });
+
+  it("pushes the full 1-10 stat range", () => {
+    assert.match(systemPromptForSoul("en"), /FULL 1.10 RANGE/i);
+    assert.match(systemPromptForSoul("es"), /TODO EL RANGO 1.10/i);
+  });
+
+  it("tells the model the card must be distinguishable from others", () => {
+    assert.match(systemPromptForSoul("en"), /VARIETY/);
+    assert.match(systemPromptForSoul("es"), /VARIEDAD/);
+  });
 });
 
 describe("SOUL_CARD_RESPONSE_SCHEMA", () => {

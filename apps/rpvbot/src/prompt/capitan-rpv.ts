@@ -193,23 +193,25 @@ function soulRules(language: SummaryLanguage): string {
 You will be given the member's previous card (as JSON, or "(no card yet)" on the first run) and a transcript of their messages from one day. Evolve the card to fold in the new evidence. Keep what still holds, retire what no longer fits, add what is new. Don't list every message — synthesise.
 
 The card has these fields:
-- title: an evocative dark-fantasy "class" name for this person, e.g. "The Midnight Architect", "The Grinning Gargoyle". In English.
-- essence: 1–2 sentences capturing who they are.
+- title: an evocative dark-fantasy "class" name for this person. Range WIDELY — it can be a role, an epithet, a perversion of a job, a piece of dark nobility, a creature, a curse given a name. Do NOT default to the "The [Noun] of [Noun]" template ("The Architect of Midnight", "The Chronicler of X"). Vary the grammar every time. The title must fit THIS person specifically, not be a generic dark-fantasy phrase.
+- essence: 1–2 sentences capturing who they are. NEVER begin with "A pragmatic soul…", "An observer…", "A being…", or any "A [noun] [adj] and [adj]…" template — those are banned, they make every card read identically. Open differently every time: with a verb, a concrete image, a contradiction, a tiny scene, a blunt statement.
 - traits: 2–5 short, free, imaginative trait phrases — specific to this person, dark-fantasy flavour welcome. NOT a fixed vocabulary; invent vivid ones.
 - quirks: 1–4 short, free, imaginative quirk phrases — concrete behaviours.
-- skills: 1–5 funny RPG-style "abilities" — special powers framed like a game skill list, e.g. "Necromancy of dead group chats", "+5 to derailing any topic", "Summons screenshots from 2019". Free, imaginative, dark-fantasy flavour, and funny.
+- skills: 1–5 funny RPG-style "abilities" — special powers framed like a game skill list. Each skill must come from THIS person's actual behaviour in the transcript. Do NOT give everyone a "Necromancy of [X]" skill — that joke is worn out; if you've used "Necromancy" once recently, don't reach for it again. Vary the grammar: some skills are "+N to X", some are named powers, some are passive abilities. Make them genuinely funny and specific.
 - catchphrase: a real characteristic line they actually say, if one stands out. Omit the field entirely if none.
 - notes: a free-text running memory — looser than every field above. Use it for nuance, in-jokes, evolving situations, recurring dynamics with other members, anything that matters but doesn't fit a trait/quirk/skill slot. Evolve it like the rest of the card: fold in the new day, keep what still matters, drop what's gone stale. Keep it under ~1200 characters — it's a memory, not a transcript. Same dark-fantasy, affectionate-roast voice. It is always present (write fresh notes on the first run); it may be a short string for a near-silent member.
-- stats: six integers 1–10, each scored RELATIVE TO A NORMAL GROUP MEMBER (5 = average), from concrete behaviour:
+- stats: six integers 1–10, each scored RELATIVE TO A NORMAL GROUP MEMBER, from concrete behaviour:
   - verbosity: how much / how long they write.
   - humor: jokes, wit, how often they go for the laugh.
   - chaos: derailing threads, cursed takes, unpredictability.
   - wisdom: genuinely sharp, sage contributions.
   - horniness: how much they steer things toward the horny — comedic, light, never explicit.
   - menace: how threatening, unhinged, feral their energy is.
+  USE THE FULL 1–10 RANGE. A card where every stat sits at 5–7 is a FAILED card — it doesn't distinguish this person from anyone else. If someone is genuinely quiet, verbosity is 2–3. If they almost never joke, humor is 2. Reserve 8–10 for axes where they genuinely stand out, and 1–2 for axes they genuinely lack. Most people are low on something and high on something — find the spikes.
 
 Hard rules:
 - Tone: dark-fantasy, wry, an AFFECTIONATE roast — cheeky, never cruel.
+- VARIETY: this member is one of ~15 in the group, each with their own card. Their card must be distinguishable from everyone else's at a glance. If the title, essence, or skills read like a generic template that could belong to anyone, rewrite them until they're unmistakably this person. No two members should share an essence opener or a title structure.
 - NEVER invent facts not present in the transcript or the previous card.
 - Stats evolve gradually — one day of chat rarely moves a stat by more than 1–2 points. Don't swing wildly.
 - Output ONLY the JSON card. No preamble, no markdown fences, no commentary.
@@ -220,23 +222,25 @@ Hard rules:
 Te darán la carta anterior del miembro (como JSON, o "(sin carta todavía)" en la primera ejecución) y la transcripción de sus mensajes de un día. Haz evolucionar la carta para incorporar la nueva evidencia. Conserva lo que siga siendo cierto, retira lo que ya no encaje, añade lo nuevo. No enumeres cada mensaje — sintetiza.
 
 La carta tiene estos campos:
-- title: un nombre de "clase" evocador de fantasía oscura para esta persona, p.ej. "El Arquitecto de la Medianoche", "La Gárgola Risueña". En español.
-- essence: 1–2 frases que capturen quién es.
+- title: un nombre de "clase" evocador de fantasía oscura para esta persona. VARÍA AMPLIAMENTE — puede ser un rol, un epíteto, la perversión de un oficio, una pieza de nobleza oscura, una criatura, una maldición con nombre. NO recurras por defecto a la plantilla "El [Sustantivo] de [Sustantivo]" ("El Arquitecto de la Medianoche", "El Cronista de X", "El Inquisidor de X", "El Oráculo de X" — todos están sobreusados, prohibidos como muletilla). Cambia la gramática cada vez. El título debe encajar con ESTA persona en concreto, no ser una frase genérica de fantasía oscura.
+- essence: 1–2 frases que capturen quién es. NUNCA empieces con "Un alma pragmática…", "Un observador…", "Un ser…", ni ninguna plantilla "Un [sustantivo] [adj] y [adj]…" — están prohibidas, hacen que todas las cartas se lean idénticas. Abre distinto cada vez: con un verbo, una imagen concreta, una contradicción, una mini-escena, una afirmación tajante.
 - traits: 2–5 rasgos cortos, libres, imaginativos — específicos de esta persona, con sabor de fantasía oscura. NO un vocabulario fijo; invéntalos vívidos.
 - quirks: 1–4 manías cortas, libres, imaginativas — comportamientos concretos.
-- skills: 1–5 "habilidades" graciosas estilo RPG — poderes especiales con formato de lista de skills de videojuego, p.ej. "Nigromancia de chats de grupo muertos", "+5 a descarrilar cualquier tema", "Invoca capturas de pantalla de 2019". Libres, imaginativas, con sabor de fantasía oscura, y graciosas.
+- skills: 1–5 "habilidades" graciosas estilo RPG — poderes especiales con formato de lista de skills de videojuego. Cada skill debe salir del comportamiento REAL de esta persona en la transcripción. NO le des a todo el mundo una skill de "Nigromancia de [X]" — ese chiste está gastado; si has usado "Nigromancia" hace poco, no vuelvas a recurrir a él. Varía la gramática: algunas skills son "+N a X", otras son poderes con nombre, otras habilidades pasivas. Que sean de verdad graciosas y específicas.
 - catchphrase: una frase característica que de verdad diga, si destaca alguna. Omite el campo entero si no hay ninguna.
 - notes: una memoria libre en texto — más suelta que todos los campos de arriba. Úsala para matices, chistes internos, situaciones que evolucionan, dinámicas recurrentes con otros miembros, cualquier cosa que importe pero no encaje en un rasgo/manía/skill. Hazla evolucionar como el resto de la carta: incorpora el día nuevo, conserva lo que siga importando, descarta lo que ya esté rancio. Mantenla por debajo de ~1200 caracteres — es una memoria, no una transcripción. Mismo tono de fantasía oscura, roast cariñoso. Siempre está presente (escribe notas nuevas en la primera ejecución); puede ser un texto corto para un miembro casi mudo.
-- stats: seis enteros 1–10, cada uno puntuado RELATIVO A UN MIEMBRO NORMAL DEL GRUPO (5 = media), a partir de comportamiento concreto:
+- stats: seis enteros 1–10, cada uno puntuado RELATIVO A UN MIEMBRO NORMAL DEL GRUPO, a partir de comportamiento concreto:
   - verbosity: cuánto / cómo de largo escribe.
   - humor: bromas, ingenio, con qué frecuencia va a por la risa.
   - chaos: descarrilar hilos, tomas cursed, imprevisibilidad.
   - wisdom: aportaciones genuinamente agudas, sabias.
   - horniness: cuánto lleva las cosas hacia lo salido — cómico, ligero, nunca explícito.
   - menace: cómo de amenazante, perturbada, feral es su energía.
+  USA TODO EL RANGO 1–10. Una carta donde todas las stats están en 5–7 es una carta FALLIDA — no distingue a esta persona de nadie. Si alguien es genuinamente callado, verbosity es 2–3. Si casi nunca bromea, humor es 2. Reserva 8–10 para los ejes donde de verdad destaca, y 1–2 para los que de verdad le faltan. Casi todo el mundo es bajo en algo y alto en algo — encuentra los picos.
 
 Reglas duras:
 - Tono: fantasía oscura, seco, un roast CARIÑOSO — pícaro, nunca cruel.
+- VARIEDAD: este miembro es uno de ~15 en el grupo, cada uno con su carta. Su carta debe distinguirse de las demás de un vistazo. Si el título, la essence o las skills se leen como una plantilla genérica que podría ser de cualquiera, reescríbelos hasta que sean inconfundiblemente de esta persona. Dos miembros no deben compartir un inicio de essence ni una estructura de título.
 - NUNCA inventes hechos que no estén en la transcripción o en la carta anterior.
 - Las stats evolucionan gradualmente — un día de chat raramente mueve una stat más de 1–2 puntos. No des bandazos.
 - Devuelve SOLO la carta JSON. Sin preámbulo, sin bloques markdown, sin comentarios.

@@ -19,6 +19,18 @@ export const SoulStatsSchema = z.object({
 });
 export type SoulStats = z.infer<typeof SoulStatsSchema>;
 
+// Field caps. Named so the schema and clampSoulCard share one source of
+// truth — clamping must trim to exactly what the schema then accepts.
+const TITLE_MAX = 80;
+const ESSENCE_MAX = 400;
+const TRAITS_MAX_ITEMS = 5;
+const TRAIT_MAX = 120;
+const QUIRKS_MAX_ITEMS = 4;
+const QUIRK_MAX = 160;
+const SKILLS_MAX_ITEMS = 5;
+const SKILL_MAX = 140;
+const CATCHPHRASE_MAX = 200;
+
 /**
  * A member's soul, as a dark-fantasy RPG character card. The numeric
  * stats are the fixed shared axes; title / traits / quirks are free,
@@ -26,18 +38,18 @@ export type SoulStats = z.infer<typeof SoulStatsSchema>;
  */
 export const SoulCardSchema = z.object({
   // Dark-fantasy class title, e.g. "El Arquitecto de la Medianoche".
-  title: z.string().min(1).max(80),
+  title: z.string().min(1).max(TITLE_MAX),
   // 1–2 sentence personality essence.
-  essence: z.string().min(1).max(400),
+  essence: z.string().min(1).max(ESSENCE_MAX),
   // Free, imaginative trait phrases.
-  traits: z.array(z.string().min(1).max(120)).min(1).max(5),
+  traits: z.array(z.string().min(1).max(TRAIT_MAX)).min(1).max(TRAITS_MAX_ITEMS),
   // Free, imaginative quirk phrases.
-  quirks: z.array(z.string().min(1).max(160)).min(1).max(4),
+  quirks: z.array(z.string().min(1).max(QUIRK_MAX)).min(1).max(QUIRKS_MAX_ITEMS),
   // Funny RPG-style "abilities" / special skills, e.g. "Necromancy of
   // dead group chats", "+5 to procrastination". Free and imaginative.
-  skills: z.array(z.string().min(1).max(140)).min(1).max(5),
+  skills: z.array(z.string().min(1).max(SKILL_MAX)).min(1).max(SKILLS_MAX_ITEMS),
   // A characteristic line/catchphrase — not everyone has one.
-  catchphrase: z.string().max(200).optional(),
+  catchphrase: z.string().max(CATCHPHRASE_MAX).optional(),
   // Free-text running memory — looser than the structured fields above.
   // The daily cron rewrites it each run, folding in the new day, so it
   // holds nuance / in-jokes / evolving context that doesn't fit a
@@ -47,6 +59,56 @@ export const SoulCardSchema = z.object({
   stats: SoulStatsSchema,
 });
 export type SoulCard = z.infer<typeof SoulCardSchema>;
+
+/**
+ * Trim a raw Gemini soul-card object to the schema's caps BEFORE
+ * validation: Gemini routinely over-runs the soft limits (a 150-char
+ * skill, a 5th quirk). Without this, zod rejects the whole otherwise-
+ * good card and the member is skipped. clampSoulCard repairs the
+ * fixable over-runs — over-long strings truncated, over-long arrays
+ * sliced — so the card passes. It does NOT fix structural problems
+ * (a missing field, a stat of 15, a non-array `traits`); those still
+ * fail safeParse and trigger the cron's retry.
+ *
+ * Garbage / non-object input is returned unchanged — let zod reject it.
+ */
+export function clampSoulCard(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return raw;
+  }
+  // Object.entries on `object` is typed [string, unknown][] — no cast.
+  const obj = new Map<string, unknown>(Object.entries(raw));
+
+  const clampStr = (key: string, max: number): void => {
+    const v = obj.get(key);
+    if (typeof v === "string" && v.length > max) {
+      obj.set(key, v.slice(0, max).trimEnd());
+    }
+  };
+  const clampArr = (key: string, maxItems: number, maxChars: number): void => {
+    const v = obj.get(key);
+    if (!Array.isArray(v)) return;
+    obj.set(
+      key,
+      v
+        .slice(0, maxItems)
+        .map((item: unknown) =>
+          typeof item === "string" && item.length > maxChars
+            ? item.slice(0, maxChars).trimEnd()
+            : item,
+        ),
+    );
+  };
+
+  clampStr("title", TITLE_MAX);
+  clampStr("essence", ESSENCE_MAX);
+  clampStr("catchphrase", CATCHPHRASE_MAX);
+  clampStr("notes", NOTES_MAX_CHARS);
+  clampArr("traits", TRAITS_MAX_ITEMS, TRAIT_MAX);
+  clampArr("quirks", QUIRKS_MAX_ITEMS, QUIRK_MAX);
+  clampArr("skills", SKILLS_MAX_ITEMS, SKILL_MAX);
+  return Object.fromEntries(obj);
+}
 
 /**
  * One row per group member with at least one stored message. Updated

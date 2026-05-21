@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 import { encodeNewlines } from "../src/domain/message.js";
 import {
+  clampSoulCard,
   parseSoulCard,
   renderSouls,
   serialiseSoulCard,
@@ -238,5 +239,64 @@ describe("renderSouls (card-aware)", () => {
     ]);
     const lines = out.split("\n");
     assert.match(lines[0] ?? "", /^Ana /);
+  });
+});
+
+describe("clampSoulCard", () => {
+  it("leaves an already-valid card unchanged", () => {
+    const valid = card();
+    const clamped = clampSoulCard(valid);
+    assert.deepEqual(clamped, valid);
+  });
+
+  it("truncates an over-long skill so the card then validates", () => {
+    const tooLong = card({ skills: ["x".repeat(300)] });
+    // The raw card fails the schema...
+    assert.equal(SoulCardSchema.safeParse(tooLong).success, false);
+    // ...but clamped, it passes.
+    const clamped = SoulCardSchema.safeParse(clampSoulCard(tooLong));
+    assert.equal(clamped.success, true);
+    if (clamped.success) {
+      assert.ok((clamped.data.skills[0] ?? "").length <= 140);
+    }
+  });
+
+  it("slices an over-long quirks array down to the cap", () => {
+    const tooMany = card({
+      quirks: ["a", "b", "c", "d", "e", "f"],
+    });
+    assert.equal(SoulCardSchema.safeParse(tooMany).success, false);
+    const clamped = SoulCardSchema.safeParse(clampSoulCard(tooMany));
+    assert.equal(clamped.success, true);
+    if (clamped.success) {
+      assert.equal(clamped.data.quirks.length, 4);
+    }
+  });
+
+  it("truncates an over-long title and essence", () => {
+    const big = card({
+      title: "T".repeat(200),
+      essence: "E".repeat(900),
+    });
+    const clamped = SoulCardSchema.safeParse(clampSoulCard(big));
+    assert.equal(clamped.success, true);
+  });
+
+  it("cannot repair a structural problem — out-of-range stat still fails", () => {
+    const badStat = { ...card(), stats: { ...card().stats, chaos: 15 } };
+    const clamped = SoulCardSchema.safeParse(clampSoulCard(badStat));
+    assert.equal(clamped.success, false);
+  });
+
+  it("cannot repair a missing required field", () => {
+    const { notes: _omit, ...noNotes } = card();
+    const clamped = SoulCardSchema.safeParse(clampSoulCard(noNotes));
+    assert.equal(clamped.success, false);
+  });
+
+  it("returns non-object input unchanged", () => {
+    assert.equal(clampSoulCard("not a card"), "not a card");
+    assert.equal(clampSoulCard(null), null);
+    assert.deepEqual(clampSoulCard([1, 2]), [1, 2]);
   });
 });

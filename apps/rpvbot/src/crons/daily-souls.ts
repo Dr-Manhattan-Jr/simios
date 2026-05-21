@@ -3,10 +3,12 @@ import { summaryLanguage } from "../domain/day.js";
 import { encodeNewlines, type MessageRecord } from "../domain/message.js";
 import {
   capSoul,
+  clampSoulCard,
   groupMessagesByUser,
   parseSoulCard,
   serialiseSoulCard,
   SoulCardSchema,
+  type SoulCard,
   type SoulRecord,
 } from "../domain/soul.js";
 import { renderTranscript } from "../domain/transcript.js";
@@ -72,35 +74,18 @@ export async function runDailySouls(
     const currentCardJson =
       existingCard !== null ? serialiseSoulCard(existingCard) : "";
 
-    let raw: unknown;
-    try {
-      raw = await gemini.generateJson({
-        system: systemPromptForSoul(language),
-        user: buildSoulPrompt({
-          memberLabel,
-          currentCardJson,
-          transcript: userTranscript,
-          language,
-        }),
-        temperature: 0.4,
-        responseSchema: SOUL_CARD_RESPONSE_SCHEMA,
-      });
-    } catch (err) {
-      console.error(
-        `rpvbot: soul generation failed for ${memberLabel}:`,
-        err,
-      );
-      failed += 1;
-      continue;
-    }
-    // Zod is the real boundary — the Gemini responseSchema only improves
-    // the odds of valid JSON; never trust it. On a bad card, skip the
-    // member (don't write a broken row); they retry next run.
-    const parsed = SoulCardSchema.safeParse(raw);
-    if (!parsed.success) {
-      console.error(
-        `rpvbot: soul card invalid for ${memberLabel}: ${parsed.error.message}`,
-      );
+    const card = await synthesiseCard(gemini, {
+      system: systemPromptForSoul(language),
+      basePrompt: buildSoulPrompt({
+        memberLabel,
+        currentCardJson,
+        transcript: userTranscript,
+        language,
+      }),
+      memberLabel,
+    });
+    if (card === null) {
+      // synthesiseCard already logged why; skip the member, retry next run.
       failed += 1;
       continue;
     }
@@ -108,7 +93,7 @@ export async function runDailySouls(
     // (sliced on code points) as a defence — a card should be well under
     // the cap, but a truncated JSON just fails parseSoulCard next read
     // and the member regenerates, so this never corrupts anything fatally.
-    const capped = capSoul(serialiseSoulCard(parsed.data), config.soulsMaxChars);
+    const capped = capSoul(serialiseSoulCard(card), config.soulsMaxChars);
     const stored = encodeNewlines(capped);
 
     const baseRecord = {
@@ -135,4 +120,79 @@ export async function runDailySouls(
   console.log(
     `rpvbot: souls — done for ${window.label}: ${String(updated)} updated, ${String(failed)} failed`,
   );
+}
+
+/**
+ * One generate+validate attempt: ok with the card, `gemini-error`
+ * (request failed — unrecoverable), or `invalid` (request succeeded but
+ * the output failed validation even after clamping — retryable).
+ */
+type AttemptResult =
+  | { readonly outcome: "ok"; readonly card: SoulCard }
+  | { readonly outcome: "gemini-error" }
+  | { readonly outcome: "invalid"; readonly error: string };
+
+/**
+ * Generate one member's soul card from Gemini, with a clamp-then-retry
+ * pipeline:
+ *  1. Generate. clampSoulCard trims any over-cap field, then safeParse.
+ *  2. If it still fails (a structural problem clamping can't fix), retry
+ *     ONCE with the zod error fed back so the model can self-correct.
+ *  3. If the retry also fails, return null — the caller skips the member.
+ */
+async function synthesiseCard(
+  gemini: GeminiTextClient,
+  args: {
+    readonly system: string;
+    readonly basePrompt: string;
+    readonly memberLabel: string;
+  },
+): Promise<SoulCard | null> {
+  const attempt = async (user: string): Promise<AttemptResult> => {
+    let raw: unknown;
+    try {
+      raw = await gemini.generateJson({
+        system: args.system,
+        user,
+        temperature: 0.4,
+        responseSchema: SOUL_CARD_RESPONSE_SCHEMA,
+      });
+    } catch (err) {
+      console.error(
+        `rpvbot: soul generation failed for ${args.memberLabel}:`,
+        err,
+      );
+      return { outcome: "gemini-error" };
+    }
+    // clampSoulCard repairs over-cap strings/arrays; zod is still the
+    // real boundary for everything clamping can't fix.
+    const parsed = SoulCardSchema.safeParse(clampSoulCard(raw));
+    return parsed.success
+      ? { outcome: "ok", card: parsed.data }
+      : { outcome: "invalid", error: parsed.error.message };
+  };
+
+  const first = await attempt(args.basePrompt);
+  if (first.outcome === "ok") return first.card;
+  if (first.outcome === "gemini-error") return null;
+
+  // Validation failed on something clamping couldn't repair — retry once
+  // with the zod error fed back so the model can correct itself.
+  console.warn(
+    `rpvbot: soul card invalid for ${args.memberLabel}, retrying: ${first.error}`,
+  );
+  const retryPrompt =
+    `${args.basePrompt}\n\n` +
+    `IMPORTANT — your previous attempt was rejected. Fix these problems ` +
+    `and return a valid card: every stat must be an integer 1–10, all ` +
+    `required fields must be present, and arrays must stay within their ` +
+    `limits. Validation error: ${first.error}`;
+  const second = await attempt(retryPrompt);
+  if (second.outcome === "ok") return second.card;
+  if (second.outcome === "invalid") {
+    console.error(
+      `rpvbot: soul card still invalid for ${args.memberLabel} after retry: ${second.error}`,
+    );
+  }
+  return null;
 }
