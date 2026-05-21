@@ -193,7 +193,7 @@ function soulRules(language: SummaryLanguage): string {
 You will be given the member's previous card (as JSON, or "(no card yet)" on the first run) and a transcript of their messages from one day. Evolve the card to fold in the new evidence. Keep what still holds, retire what no longer fits, add what is new. Don't list every message — synthesise.
 
 The card has these fields:
-- title: an evocative dark-fantasy "class" name for this person. Range WIDELY — it can be a role, an epithet, a perversion of a job, a piece of dark nobility, a creature, a curse given a name. Do NOT default to the "The [Noun] of [Noun]" template ("The Architect of Midnight", "The Chronicler of X"). Vary the grammar every time. The title must fit THIS person specifically, not be a generic dark-fantasy phrase.
+- title: a sharp, evocative dark-fantasy "class" name for this person. The "The [Noun] of [Noun]" template ("The Inquisitor of the Gym", "The Chronicler of X", "The Oracle of Y") is BANNED — it's bland and every card was using it. Range hard across forms: a single weird evocative word ("Brasero", "Hueco", "Pústula"); an absurd cursed job ("Tax Collector of Other People's Shame"); a creature ("the thing that lives in the group's group-buy spreadsheet"); a perverse honorific ("Third Undersecretary of the Gains"); a title that's a small joke in itself. Test: a title that could plausibly fit three different members is a FAILED title — it must be unmistakably THIS person. Weird and specific beats elegant and generic.
 - essence: 1–2 sentences capturing who they are. NEVER begin with "A pragmatic soul…", "An observer…", "A being…", or any "A [noun] [adj] and [adj]…" template — those are banned, they make every card read identically. Open differently every time: with a verb, a concrete image, a contradiction, a tiny scene, a blunt statement.
 - traits: 2–5 short, free, imaginative trait phrases — specific to this person, dark-fantasy flavour welcome. NOT a fixed vocabulary; invent vivid ones.
 - quirks: 1–4 short, free, imaginative quirk phrases — concrete behaviours.
@@ -222,7 +222,7 @@ Hard rules:
 Te darán la carta anterior del miembro (como JSON, o "(sin carta todavía)" en la primera ejecución) y la transcripción de sus mensajes de un día. Haz evolucionar la carta para incorporar la nueva evidencia. Conserva lo que siga siendo cierto, retira lo que ya no encaje, añade lo nuevo. No enumeres cada mensaje — sintetiza.
 
 La carta tiene estos campos:
-- title: un nombre de "clase" evocador de fantasía oscura para esta persona. VARÍA AMPLIAMENTE — puede ser un rol, un epíteto, la perversión de un oficio, una pieza de nobleza oscura, una criatura, una maldición con nombre. NO recurras por defecto a la plantilla "El [Sustantivo] de [Sustantivo]" ("El Arquitecto de la Medianoche", "El Cronista de X", "El Inquisidor de X", "El Oráculo de X" — todos están sobreusados, prohibidos como muletilla). Cambia la gramática cada vez. El título debe encajar con ESTA persona en concreto, no ser una frase genérica de fantasía oscura.
+- title: un nombre de "clase" de fantasía oscura agudo y evocador para esta persona. La plantilla "El [Sustantivo] de [Sustantivo]" ("El Inquisidor del Gimnasio", "El Cronista de X", "El Oráculo de Y") está PROHIBIDA — es sosa y todas las cartas la usaban. Varía con fuerza entre formas: una sola palabra rara y evocadora ("Brasero", "Hueco", "Pústula"); un oficio maldito y absurdo ("Recaudador de la Vergüenza Ajena"); una criatura ("la cosa que vive en el excel de pedidos del grupo"); un honorífico perverso ("Tercer Subsecretario de los Gains"); un título que sea un pequeño chiste en sí mismo. Prueba: un título que podría encajar con tres miembros distintos es un título FALLIDO — debe ser inconfundiblemente de ESTA persona. Raro y específico gana a elegante y genérico.
 - essence: 1–2 frases que capturen quién es. NUNCA empieces con "Un alma pragmática…", "Un observador…", "Un ser…", ni ninguna plantilla "Un [sustantivo] [adj] y [adj]…" — están prohibidas, hacen que todas las cartas se lean idénticas. Abre distinto cada vez: con un verbo, una imagen concreta, una contradicción, una mini-escena, una afirmación tajante.
 - traits: 2–5 rasgos cortos, libres, imaginativos — específicos de esta persona, con sabor de fantasía oscura. NO un vocabulario fijo; invéntalos vívidos.
 - quirks: 1–4 manías cortas, libres, imaginativas — comportamientos concretos.
@@ -251,12 +251,70 @@ export function systemPromptForSoul(language: SummaryLanguage): string {
   return soulRules(language);
 }
 
+/**
+ * What other members in the SAME run already got — fed to each card so
+ * the model can actively de-duplicate. The model generates members one
+ * at a time and otherwise has no idea it's repeating itself; this is the
+ * only thing that actually breaks the moulds (a prompt that just says
+ * "be varied" doesn't work — the model thinks it already is).
+ */
+export interface SoulAvoidList {
+  /** Titles already assigned to other members this run. */
+  readonly titles: readonly string[];
+  /** First few words of each essence already written this run. */
+  readonly essenceOpeners: readonly string[];
+  /** Recurring skill-theme words already used (e.g. "Nigromancia"). */
+  readonly skillThemes: readonly string[];
+}
+
 interface SoulPromptArgs {
   readonly memberLabel: string;
   /** The member's previous card as a JSON string, or "" on first run. */
   readonly currentCardJson: string;
   readonly transcript: string;
   readonly language: SummaryLanguage;
+  /** Other members' titles/openers/skill-themes from this same run. */
+  readonly avoid: SoulAvoidList;
+}
+
+function renderAvoidSection(
+  avoid: SoulAvoidList,
+  language: SummaryLanguage,
+): string {
+  if (
+    avoid.titles.length === 0 &&
+    avoid.essenceOpeners.length === 0 &&
+    avoid.skillThemes.length === 0
+  ) {
+    return "";
+  }
+  const lines: string[] =
+    language === "en"
+      ? [
+          "ALREADY USED by other members in this same run — you MUST NOT",
+          "reuse these, echo their structure, or pick anything that reads",
+          "as a near-variant. Be genuinely different from all of them:",
+        ]
+      : [
+          "YA USADO por otros miembros en esta misma ejecución — NO debes",
+          "reutilizar esto, ni imitar su estructura, ni elegir nada que se",
+          "lea como una variante cercana. Sé genuinamente distinto de todos:",
+        ];
+  const titlesLabel = language === "en" ? "Taken titles" : "Títulos ocupados";
+  const openersLabel =
+    language === "en" ? "Used essence openers" : "Inicios de essence usados";
+  const themesLabel =
+    language === "en" ? "Overused skill words" : "Palabras de skill sobreusadas";
+  if (avoid.titles.length > 0) {
+    lines.push(`${titlesLabel}: ${avoid.titles.join(" / ")}`);
+  }
+  if (avoid.essenceOpeners.length > 0) {
+    lines.push(`${openersLabel}: ${avoid.essenceOpeners.join(" / ")}`);
+  }
+  if (avoid.skillThemes.length > 0) {
+    lines.push(`${themesLabel}: ${avoid.skillThemes.join(", ")}`);
+  }
+  return `\n\n${lines.join("\n")}`;
 }
 
 export function buildSoulPrompt(args: SoulPromptArgs): string {
@@ -275,5 +333,6 @@ export function buildSoulPrompt(args: SoulPromptArgs): string {
     args.currentCardJson.trim().length === 0
       ? emptyPlaceholder
       : args.currentCardJson;
-  return `${memberHeader} ${args.memberLabel}\n\n${existingHeader}\n${currentBlock}\n\n${transcriptHeader}\n${args.transcript}`;
+  const avoidSection = renderAvoidSection(args.avoid, args.language);
+  return `${memberHeader} ${args.memberLabel}\n\n${existingHeader}\n${currentBlock}\n\n${transcriptHeader}\n${args.transcript}${avoidSection}`;
 }

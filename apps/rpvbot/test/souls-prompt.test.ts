@@ -56,7 +56,8 @@ describe("systemPromptForSoul (RPG card)", () => {
 
   it("bans the overused title moulds", () => {
     assert.match(systemPromptForSoul("es"), /El Inquisidor|El Oráculo|El Cronista/);
-    assert.match(systemPromptForSoul("en"), /do NOT default to/i);
+    assert.match(systemPromptForSoul("en"), /\bBANNED\b/);
+    assert.match(systemPromptForSoul("es"), /\bPROHIBIDA\b/);
   });
 
   it("warns off the repeated Necromancy skill", () => {
@@ -95,6 +96,12 @@ describe("SOUL_CARD_RESPONSE_SCHEMA", () => {
   });
 });
 
+const EMPTY_AVOID = {
+  titles: [],
+  essenceOpeners: [],
+  skillThemes: [],
+};
+
 describe("buildSoulPrompt", () => {
   it("includes the member label", () => {
     const p = buildSoulPrompt({
@@ -102,6 +109,7 @@ describe("buildSoulPrompt", () => {
       currentCardJson: "",
       transcript: "msg",
       language: "es",
+      avoid: EMPTY_AVOID,
     });
     assert.match(p, /@alice \(Alice\)/);
   });
@@ -112,6 +120,7 @@ describe("buildSoulPrompt", () => {
       currentCardJson: "",
       transcript: "msg",
       language: "es",
+      avoid: EMPTY_AVOID,
     });
     assert.match(p, /\(sin carta todavía\)/);
   });
@@ -122,9 +131,51 @@ describe("buildSoulPrompt", () => {
       currentCardJson: '{"title":"El Viejo Cuervo"}',
       transcript: "msg",
       language: "es",
+      avoid: EMPTY_AVOID,
     });
     assert.match(p, /El Viejo Cuervo/);
     assert.equal(p.includes("(sin carta todavía)"), false);
+  });
+
+  it("omits the avoid section entirely when nothing is used yet", () => {
+    const p = buildSoulPrompt({
+      memberLabel: "Carlos",
+      currentCardJson: "",
+      transcript: "msg",
+      language: "es",
+      avoid: EMPTY_AVOID,
+    });
+    assert.equal(p.includes("YA USADO"), false);
+  });
+
+  it("lists already-used titles, openers and skill themes to avoid", () => {
+    const p = buildSoulPrompt({
+      memberLabel: "Carlos",
+      currentCardJson: "",
+      transcript: "msg",
+      language: "es",
+      avoid: {
+        titles: ["El Inquisidor del Gimnasio", "El Cronista de las Sombras"],
+        essenceOpeners: ["Un alma pragmática y"],
+        skillThemes: ["Nigromancia", "Invocación"],
+      },
+    });
+    assert.match(p, /YA USADO/);
+    assert.match(p, /El Inquisidor del Gimnasio/);
+    assert.match(p, /Un alma pragmática y/);
+    assert.match(p, /Nigromancia/);
+  });
+
+  it("renders the avoid section in English too", () => {
+    const p = buildSoulPrompt({
+      memberLabel: "Carlos",
+      currentCardJson: "",
+      transcript: "msg",
+      language: "en",
+      avoid: { titles: ["The Gym Inquisitor"], essenceOpeners: [], skillThemes: [] },
+    });
+    assert.match(p, /ALREADY USED/);
+    assert.match(p, /The Gym Inquisitor/);
   });
 });
 

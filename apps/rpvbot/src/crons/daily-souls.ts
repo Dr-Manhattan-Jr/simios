@@ -4,9 +4,11 @@ import { encodeNewlines, type MessageRecord } from "../domain/message.js";
 import {
   capSoul,
   clampSoulCard,
+  essenceOpener,
   groupMessagesByUser,
   parseSoulCard,
   serialiseSoulCard,
+  skillThemeWords,
   SoulCardSchema,
   type SoulCard,
   type SoulRecord,
@@ -16,6 +18,7 @@ import { previousCalendarDayBounds } from "../domain/window.js";
 import type { GeminiTextClient } from "../gemini/text.js";
 import {
   buildSoulPrompt,
+  type SoulAvoidList,
   SOUL_CARD_RESPONSE_SCHEMA,
   systemPromptForSoul,
 } from "../prompt/capitan-rpv.js";
@@ -57,6 +60,16 @@ export async function runDailySouls(
   let updated = 0;
   let failed = 0;
 
+  // De-dup accumulator: titles / essence-openers / skill-theme words
+  // already produced THIS run. Each member's prompt is told to avoid
+  // them — the model generates one member at a time and otherwise can't
+  // see it's repeating itself. Without this, cards converge on a few
+  // moulds ("El Inquisidor de X", "Un alma pragmática…", "Nigromancia
+  // de…"); a prompt that just says "be varied" doesn't fix that.
+  const usedTitles: string[] = [];
+  const usedOpeners: string[] = [];
+  const usedSkillThemes = new Set<string>();
+
   // Sequential rather than parallel: keeps Gemini quota predictable and
   // souls aren't time-critical. Members who didn't speak yesterday are
   // skipped — their souls stay frozen at whatever they were last set to,
@@ -74,6 +87,11 @@ export async function runDailySouls(
     const currentCardJson =
       existingCard !== null ? serialiseSoulCard(existingCard) : "";
 
+    const avoid: SoulAvoidList = {
+      titles: usedTitles,
+      essenceOpeners: usedOpeners,
+      skillThemes: [...usedSkillThemes],
+    };
     const card = await synthesiseCard(gemini, {
       system: systemPromptForSoul(language),
       basePrompt: buildSoulPrompt({
@@ -81,6 +99,7 @@ export async function runDailySouls(
         currentCardJson,
         transcript: userTranscript,
         language,
+        avoid,
       }),
       memberLabel,
     });
@@ -89,6 +108,10 @@ export async function runDailySouls(
       failed += 1;
       continue;
     }
+    // Feed this card into the accumulator so later members avoid it.
+    usedTitles.push(card.title);
+    usedOpeners.push(essenceOpener(card.essence));
+    for (const w of skillThemeWords(card.skills)) usedSkillThemes.add(w);
     // Store the card as a JSON string. Hard-cap the serialised length
     // (sliced on code points) as a defence — a card should be well under
     // the cap, but a truncated JSON just fails parseSoulCard next read

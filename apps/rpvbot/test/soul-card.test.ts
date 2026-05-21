@@ -3,9 +3,11 @@ import { describe, it } from "node:test";
 import { encodeNewlines } from "../src/domain/message.js";
 import {
   clampSoulCard,
+  essenceOpener,
   parseSoulCard,
   renderSouls,
   serialiseSoulCard,
+  skillThemeWords,
   SoulCardSchema,
   type SoulCard,
   type SoulRecord,
@@ -298,5 +300,47 @@ describe("clampSoulCard", () => {
     assert.equal(clampSoulCard("not a card"), "not a card");
     assert.equal(clampSoulCard(null), null);
     assert.deepEqual(clampSoulCard([1, 2]), [1, 2]);
+  });
+});
+
+describe("essenceOpener", () => {
+  it("returns the first 4 words", () => {
+    assert.equal(
+      essenceOpener("Un alma pragmática y directa, siempre lista."),
+      "Un alma pragmática y",
+    );
+  });
+
+  it("returns the whole string when shorter than 4 words", () => {
+    assert.equal(essenceOpener("Seco y preciso"), "Seco y preciso");
+  });
+
+  it("collapses irregular whitespace", () => {
+    assert.equal(essenceOpener("Un   alma\npragmática  y más"), "Un alma pragmática y");
+  });
+});
+
+describe("skillThemeWords", () => {
+  it("extracts capitalised theme words ≥5 letters", () => {
+    const themes = skillThemeWords([
+      "Nigromancia de chats muertos",
+      "Invocación de stickers",
+    ]);
+    assert.ok(themes.includes("Nigromancia"));
+    assert.ok(themes.includes("Invocación"));
+  });
+
+  it("ignores short words and lowercase words", () => {
+    const themes = skillThemeWords(["+3 a la cosa", "de los no-muertos"]);
+    // "cosa" is lowercase, "+3"/"a"/"la"/"de"/"los" are short or lowercase.
+    assert.equal(themes.length, 0);
+  });
+
+  it("dedupes a theme word repeated across skills", () => {
+    const themes = skillThemeWords([
+      "Nigromancia de datos",
+      "Nigromancia de chats",
+    ]);
+    assert.equal(themes.filter((w) => w === "Nigromancia").length, 1);
   });
 });

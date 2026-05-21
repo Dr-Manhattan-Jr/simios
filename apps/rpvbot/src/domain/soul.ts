@@ -161,6 +161,33 @@ export function serialiseSoulCard(card: SoulCard): string {
 }
 
 /**
+ * First few words of an essence — the "opener" the souls cron feeds to
+ * later members so they don't all start "Un alma pragmática y…".
+ */
+export function essenceOpener(essence: string): string {
+  return essence.trim().split(/\s+/).slice(0, 4).join(" ");
+}
+
+/**
+ * The notable theme words in a card's skills — the souls cron collects
+ * these across members so it can tell each new card which skill clichés
+ * are already overused this run (e.g. "Nigromancia", "Invocación").
+ * We pick capitalised words ≥ 5 letters: skill names are Title Case and
+ * the cliché nouns ("Nigromancia", "Invocación", "Maldición") all match.
+ */
+export function skillThemeWords(skills: readonly string[]): string[] {
+  const words = new Set<string>();
+  for (const skill of skills) {
+    for (const word of skill.split(/[^\p{L}]+/u)) {
+      if (word.length >= 5 && word[0] === word[0]?.toUpperCase()) {
+        words.add(word);
+      }
+    }
+  }
+  return [...words];
+}
+
+/**
  * Group messages that fall inside `window` by user_id, preserving
  * chronological order within each user's bucket. Pure helper — lives in
  * the domain so cron files stay pure orchestration.
