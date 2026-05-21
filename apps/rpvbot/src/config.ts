@@ -26,7 +26,9 @@ const RawEnvSchema = z.object({
   ),
   // Tunable so dev runs can fire the daily flows without waiting 24h.
   DAILY_RESUME_CRON: NonEmptyString.default("0 9 * * *"),
-  SOULS_CRON: NonEmptyString.default("0 12 * * *"),
+  // 02:00 — a heavy ~14-call Gemini run with no user-facing output;
+  // runs in the quiet small hours over the day that just ended.
+  SOULS_CRON: NonEmptyString.default("0 2 * * *"),
   PRUNE_CRON: NonEmptyString.default("0 3 * * *"),
   OCR_CRON: NonEmptyString.default("0 * * * *"),
   RPV_MAX_N: z.coerce.number().int().positive().default(RPV_MAX_N),

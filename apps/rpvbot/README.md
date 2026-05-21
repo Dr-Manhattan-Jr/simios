@@ -7,7 +7,7 @@ Telegram bot — **Capitán RPV**, the chronicler of the group. Four features:
   - Pass a **positive integer** (max 500) to get a Capitán RPV summary of the last N messages, OR
   - Pass a **free-text question** (any other input) to get an answer grounded in the persisted chat history. The question is treated as untrusted input: the system prompt refuses prompt-extraction, infra-disclosure, and instruction-injection attempts, and the bot never invents facts beyond the transcript. Member **souls** (see below) are also injected as background context, so the bot understands who people are — but the transcript stays the source of hard facts; souls only colour the answer, never override what was actually said.
   Rate-limited: at most one fire per 60 s group-wide, and the same user can't fire more than once per 5 min. Abusers get a snarky one-liner. The bot reply-quotes the triggering `/rpv` so the answer threads under it in Telegram.
-- **Daily souls cron.** Every day at 12:00 Europe/Madrid, the bot reads yesterday's messages, groups them by member, and incrementally updates a per-member "soul" — a **dark-fantasy RPG character card**. The card has six fixed numeric stat axes (verbosity, humor, chaos, wisdom, horniness, menace, each 1–10, scored relative to a normal group member) plus free-form imaginative fields: a fantasy class `title`, an `essence`, `traits`, `quirks`, funny RPG-style `skills`, an optional `catchphrase`, and a free-text `notes` field — a looser, capped running memory (in-jokes, evolving context, recurring dynamics) that the rigid card slots can't hold. Update is `previous_card + new_messages → new_card` via Gemini structured-JSON synthesis, stored as JSON in the `rpv_souls` tab; every field, including `notes`, is re-synthesised (evolved, not reset) each run. Souls are not exposed via a command, but the whole card — stats, fields, and `notes` — is injected as background context into `/rpv` question answers (see above).
+- **Daily souls cron.** Every day at 02:00 Europe/Madrid, the bot reads yesterday's messages, groups them by member, and incrementally updates a per-member "soul" — a **dark-fantasy RPG character card**. The card has six fixed numeric stat axes (verbosity, humor, chaos, wisdom, horniness, menace, each 1–10, scored relative to a normal group member) plus free-form imaginative fields: a fantasy class `title`, an `essence`, `traits`, `quirks`, funny RPG-style `skills`, an optional `catchphrase`, and a free-text `notes` field — a looser, capped running memory (in-jokes, evolving context, recurring dynamics) that the rigid card slots can't hold. Update is `previous_card + new_messages → new_card` via Gemini structured-JSON synthesis, stored as JSON in the `rpv_souls` tab; every field, including `notes`, is re-synthesised (evolved, not reset) each run. Souls are not exposed via a command, but the whole card — stats, fields, and `notes` — is injected as background context into `/rpv` question answers (see above).
 - **Image OCR cron.** When someone shares a **photo** or a **static sticker**, the bot captures it instantly (a `pending` row in the `rpv_images` tab) and an hourly cron downloads it, runs it through Gemini 2.5 Flash for **OCR + a short description**, and rewrites the image's `rpv_messages` text to a `[photo: …]` / `[sticker: …]` token. The bot's whole context (resume, `/rpv`, souls) then sees what was shared — a screenshot, a meme, a photo — with no other code changes. Animated stickers (`.tgs`), video stickers (`.webm`) and GIFs (Telegram delivers them as MP4) can't be read as still images, so they keep their emoji+set token only.
 
 **Language rule:** the summary/answer body is written in **Spanish on Mon–Thu and Sat–Sun**, and in **English on Fridays**, aligned with `los_piratas_bot`'s "English Friday" theme. The fixed prefix lines (`📜 Daily Resume — …`, `🧭 Unread Resume — last N messages`, `🧭 Question — …`) stay English always — they're the machine-readable contract for future "retrieve all resumes from last year" features.
@@ -20,7 +20,7 @@ Telegram bot — **Capitán RPV**, the chronicler of the group. Four features:
 2. Skip slash commands (text only) and anonymous channel posts.
 3. Upsert into `rpv_messages` (key = Telegram `message_id`, naturally idempotent). Photos + static stickers also get a `pending` row in `rpv_images`.
 4. Daily 09:00 cron: pull yesterday's window, render a transcript, ask Gemini for a Capitán RPV–voiced summary, post it with the `📜` prefix, record in `rpv_summaries`.
-5. Daily 12:00 cron: pull yesterday's window, group by user, for each user fold their messages into their soul (`rpv_souls`).
+5. Daily 02:00 cron: pull yesterday's window, group by user, for each user fold their messages into their soul (`rpv_souls`).
 6. Hourly cron: take up to `OCR_MAX_PER_RUN` `pending` images, download + describe each via Gemini vision, rewrite the linked `rpv_messages` text.
 7. Daily 03:00 cron: delete `rpv_messages` and `rpv_images` rows older than `MESSAGE_RETENTION_DAYS` (default 30). Summaries and souls are kept forever.
 8. `/rpv` command: parse arg as integer (count mode) or sanitised free text (question mode). Count mode → last-N summary. Question mode → grounded answer from the last `QUESTION_CONTEXT_MESSAGES` (default 300).
@@ -54,7 +54,7 @@ Four tabs on the same spreadsheet as `ciclobot` and `los_piratas_bot`.
 | user_id | username | first_name | soul_text | soul_chars | updated_at | runs |
 |---------|----------|------------|-----------|------------|------------|------|
 
-- `user_id` is the table key. Updated daily by the 12:00 souls cron; members who didn't speak yesterday are skipped.
+- `user_id` is the table key. Updated daily by the 02:00 souls cron; members who didn't speak yesterday are skipped.
 - `soul_text` is the RPG character card as a newline-encoded JSON string (`{ title, essence, traits[], quirks[], skills[], catchphrase?, notes, stats{...} }`). `notes` is a free-text running memory (capped ~1200 chars). Legacy souls from before a field was added are simply regenerated on the next cron run.
 - `soul_chars` is the post-encoding length, hard-capped at `SOULS_MAX_CHARS` (default 4500).
 - `runs` is a monotonic counter — how many times this soul has been updated.
@@ -92,7 +92,7 @@ User-supplied free text flowing into an LLM prompt is treated as untrusted. Two 
    - `GEMINI_MODEL` — defaults to `gemini-2.5-flash`.
    - `TZ` — defaults to `Europe/Madrid`.
    - `DAILY_RESUME_CRON` — defaults to `0 9 * * *`.
-   - `SOULS_CRON` — defaults to `0 12 * * *`.
+   - `SOULS_CRON` — defaults to `0 2 * * *`.
    - `OCR_CRON` — defaults to `0 * * * *` (hourly). `"off"` disables the image OCR cron.
    - `PRUNE_CRON` — defaults to `0 3 * * *`.
    - `RPV_MAX_N` — defaults to `500`.
