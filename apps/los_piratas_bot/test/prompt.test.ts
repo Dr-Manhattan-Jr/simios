@@ -52,6 +52,8 @@ describe("buildUserPrompt", () => {
     assert.ok(insult.toLowerCase().includes("insult"));
     assert.ok(correct.toLowerCase().includes("correct"));
     assert.ok(correct.includes("SKIP"));
+    // Correction mode asks for a friendly tutor tone, not a pirate jab.
+    assert.ok(/tutor/i.test(correct));
   });
 });
 
@@ -114,6 +116,14 @@ describe("SYSTEM_PROMPT", () => {
     // to "if you are technical". Contracting/expanding is a style choice.
     assert.ok(/CONTRACTIONS/.test(SYSTEM_PROMPT));
     assert.ok(SYSTEM_PROMPT.includes("if you're technical"));
+  });
+  it("makes the correction format educational, not insulting", () => {
+    // Corrections drop the pirate persona — friendly tutor tone, a
+    // brief reason so the person learns, and no curses or insults.
+    assert.ok(/CORRECTION FORMAT — EDUCATIONAL/.test(SYSTEM_PROMPT));
+    assert.ok(/NO curses/.test(SYSTEM_PROMPT));
+    assert.ok(/NO insult/.test(SYSTEM_PROMPT));
+    assert.ok(/tutor/i.test(SYSTEM_PROMPT));
   });
 });
 
