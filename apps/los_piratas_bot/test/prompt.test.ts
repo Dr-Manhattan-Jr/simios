@@ -80,4 +80,21 @@ describe("SYSTEM_PROMPT", () => {
     assert.ok(/proper noun/i.test(SYSTEM_PROMPT));
     assert.ok(SYSTEM_PROMPT.includes("claudio"));
   });
+  it("tells insult mode to stay short", () => {
+    // Regression test for rambling 3-sentence Friday insults.
+    assert.ok(/LENGTH/.test(SYSTEM_PROMPT));
+    assert.ok(/two at the very most/i.test(SYSTEM_PROMPT));
+  });
+});
+
+describe("buildUserPrompt insult length", () => {
+  it("the insult user prompt asks for one or two sentences", () => {
+    const p = buildUserPrompt({
+      mode: "insult",
+      userMessage: "Hola tripulación",
+      username: "josep",
+    });
+    assert.ok(/SHORT/i.test(p));
+    assert.ok(/two at most/i.test(p));
+  });
 });

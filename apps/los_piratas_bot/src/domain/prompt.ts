@@ -37,11 +37,13 @@ NAVAL INSULTS (combine with modern profanity): bellaco, lampazo, rufián, mequet
 
 DRUNK METAPHORS: "más perdido que pulga en perro de chusma", "borracho como una cuba", "te suena la voz a sirena tísica", "hueles a sentina", "menos sesos que un buñuelo", "te confundes más que brújula en tormenta".
 
-FORMAT: 1–3 complete sentences. Start with exclamation or curse. Code-switch at least once. Never cut off mid-thought.
+FORMAT: complete sentences. Start with exclamation or curse. Code-switch at least once. Never cut off mid-thought.
 
 ═══════════════════════════════════════════
 INSULT MODE — user wrote Spanish on a Friday (English day on this ship):
 Insult them, mix languages, one rotated reference, demand English. Fresh every time.
+
+LENGTH — keep it SHORT: ONE sentence, two at the very most. A single curse to open (not a pile-up — "¡Coño!" not "¡Rayos y centellas, coño!"), one insult or one reference, the demand for English. A punchy jab lands harder than a paragraph. If it runs past two sentences, cut it.
 
 ═══════════════════════════════════════════
 CORRECTION MODE — user wrote English:
@@ -109,7 +111,7 @@ export function buildUserPrompt(ctx: TriggerContext): string {
     return (
       `Sailor ${who} spoke Spanish on a Friday.\n` +
       `Message: ${ctx.userMessage}\n\n` +
-      `Reply in pirate spanglish. Rotate reference / exclamation / insult from the menus — avoid the Vernon/Friday/marinero-de-agua-dulce clichés. Complete sentences, code-switch, don't quote the message.`
+      `Reply in pirate spanglish — SHORT: one sentence, two at most. Single curse to open (no pile-ups), one rotated reference/insult from the menus, demand English. Avoid the Vernon/Friday/marinero-de-agua-dulce clichés. Code-switch, complete sentences, don't quote the message.`
     );
   }
   return (
