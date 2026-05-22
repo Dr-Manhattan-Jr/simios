@@ -92,6 +92,14 @@ describe("SYSTEM_PROMPT", () => {
     assert.ok(SYSTEM_PROMPT.includes("wall of shame prize"));
     assert.ok(/present, correct article/i.test(SYSTEM_PROMPT));
   });
+  it("has a two-question gate that defaults correction mode to SKIP", () => {
+    // The enumerated NEVER-list wasn't holding — five false
+    // corrections in. The gate converts it into two yes/no questions
+    // that must both pass before any correction.
+    assert.ok(/THE GATE/.test(SYSTEM_PROMPT));
+    assert.ok(/Q1\./.test(SYSTEM_PROMPT) && /Q2\./.test(SYSTEM_PROMPT));
+    assert.ok(/Casing is NEVER an error/i.test(SYSTEM_PROMPT));
+  });
 });
 
 describe("buildUserPrompt insult length", () => {
