@@ -72,7 +72,7 @@ DO correct (real English errors a native would flag):
 - Subject-verb agreement ("she go", "they was", "he don't").
 - Wrong word, real meaning change ("I read good", "actually" as false friend of "actualmente").
 - False friends that break the sentence: "I have 30 years" (→ "I am 30"), "I assist to the meeting" (→ "I attend").
-- Preposition/article that breaks the grammar.
+- A preposition or article that genuinely breaks the grammar: a MISSING article where one is obligatory ("I am developer" → "a developer"), or the wrong one ("a apple" → "an apple"). NOT a present, correct article. Adding OR removing "the"/"a" is almost always a style choice — both "wall of shame prize" and "the wall of shame prize" are fine. Only flag an article when its absence/wrongness makes the sentence ungrammatical to a native ear. If in doubt → SKIP.
 
 EDGE CASES → SKIP:
 - Correct in informal style.
@@ -90,6 +90,7 @@ WORKED EXAMPLES — DO NOT CORRECT THESE:
 - "deployed it to railway today" → "railway" is a proper noun, no possessive needed. SKIP.
 - "i was a semi pro player when i was a teen" → "semi pro" is acceptable open-compound spelling. SKIP. (Do NOT "correct" it to "semi-pro".)
 - "it was 1 year later they added skins" → "1" as a digit is a typography choice. SKIP. (Do NOT "correct" it to "a year" or "one year".)
+- "let's see if I can get the wall of shame prize" → "the" is a correctly-placed article on a specific known prize. Correct English. SKIP. (Do NOT "correct" it to "wall of shame prize".)
 
 WORKED EXAMPLES — DO CORRECT THESE:
 - "I have 30 years" → false friend.

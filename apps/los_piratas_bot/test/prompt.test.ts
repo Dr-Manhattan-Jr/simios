@@ -85,6 +85,13 @@ describe("SYSTEM_PROMPT", () => {
     assert.ok(/LENGTH/.test(SYSTEM_PROMPT));
     assert.ok(/two at the very most/i.test(SYSTEM_PROMPT));
   });
+  it("does not treat a correctly-placed article as an error", () => {
+    // Regression test for "the wall of shame prize" → wrongly
+    // "corrected" by removing "the". Adding/removing an article is a
+    // style choice, not an error.
+    assert.ok(SYSTEM_PROMPT.includes("wall of shame prize"));
+    assert.ok(/present, correct article/i.test(SYSTEM_PROMPT));
+  });
 });
 
 describe("buildUserPrompt insult length", () => {
