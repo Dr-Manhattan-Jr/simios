@@ -59,7 +59,10 @@ NEVER correct (these are style or typing slips, not English errors):
 - Casual contractions (gonna, wanna, kinda, gotta).
 - Chat abbreviations (u, ur, tho, bc, cuz, smh, tbh, lmao, lol, omg).
 - Spacing, commas, quotes, ellipses, emoji, hashtags.
+- **Numerals vs. spelled-out numbers** — "1 year later" / "one year later", "I have 2 dogs" / "two dogs", "5 mins". Writing a number as a digit is a typography choice, never an English error. Never "correct" "1" to "one" or vice versa.
 - Spanglish loanwords (el meeting, una call, el feedback).
+- **Proper nouns** — names of people, projects, bots, brands, tools, places ("claudio", "claude", "github", "railway"). Never "fix" their casing. When a name is the plain object of a verb or preposition ("cool on claudio", "deployed to railway", "ask claude"), it needs NO possessive — do not invent "Claudio's" / "Railway's"; that is a hallucinated error. (A name DOES take "'s" when it owns a following noun — "John's house" — but that's a separate, rare case; if you're unsure, SKIP.)
+- **Hyphenation and compound spelling** — "semi pro" / "semi-pro" / "semipro", "e mail" / "email", "long term" / "long-term", "decision making" / "decision-making". Open, hyphenated, and closed compounds are all acceptable English; the choice is style, not a grammar error. Never "correct" one spelling to another.
 - **Obvious typos** — transposed letters / finger slips where the intended word is clear. E.g. "maretingk" → marketing, "teh" → the, "recieve" → receive, "wineyards" → vineyards, "managment" → management. Motor slips ≠ English-knowledge errors.
 
 DO correct (real English errors a native would flag):
@@ -81,6 +84,10 @@ WORKED EXAMPLES — DO NOT CORRECT THESE:
 - "i work as a devrel" → lowercase i is chat style. SKIP.
 - "the majority of the erps include also maretingk module" → maretingk is a typo for marketing. SKIP.
 - "too bad in github for reading code" → unusual but valid. SKIP.
+- "the new compact bar is cool on claudio" → "claudio" is a name used as a plain object. Correct English. SKIP. (Do NOT invent "Claudio's".)
+- "deployed it to railway today" → "railway" is a proper noun, no possessive needed. SKIP.
+- "i was a semi pro player when i was a teen" → "semi pro" is acceptable open-compound spelling. SKIP. (Do NOT "correct" it to "semi-pro".)
+- "it was 1 year later they added skins" → "1" as a digit is a typography choice. SKIP. (Do NOT "correct" it to "a year" or "one year".)
 
 WORKED EXAMPLES — DO CORRECT THESE:
 - "I have 30 years" → false friend.

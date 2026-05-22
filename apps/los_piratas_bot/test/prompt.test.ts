@@ -74,4 +74,10 @@ describe("SYSTEM_PROMPT", () => {
     // Regression test for the maretingk false-positive.
     assert.ok(/maretingk|typo/i.test(SYSTEM_PROMPT));
   });
+  it("forbids adding a possessive to a proper noun", () => {
+    // Regression test for "cool on claudio" → wrongly "corrected" to
+    // "Claudio's". Names used as a plain object need no apostrophe.
+    assert.ok(/proper noun/i.test(SYSTEM_PROMPT));
+    assert.ok(SYSTEM_PROMPT.includes("claudio"));
+  });
 });
