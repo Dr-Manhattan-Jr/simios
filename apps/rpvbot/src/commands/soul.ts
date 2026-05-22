@@ -78,12 +78,12 @@ export function buildSoul(deps: SoulDeps) {
  * Send the rendered card, reply-quoting the triggering /soul so it
  * threads under the request (same as /rpv).
  *
- * The card uses `parse_mode: Markdown`. The renderer escapes every
- * metacharacter, so a parse error should not happen — but
- * member-influenced text is unpredictable, so on ANY send failure we
- * retry once as plain text (no parse_mode). A card with literal `*`/`_`
- * markers beats no card at all. Only if the plain retry also fails do
- * we give up and log.
+ * The card uses `parse_mode: MarkdownV2` (for the expandable
+ * blockquote). The renderer escapes every metacharacter, so a parse
+ * error should not happen — but member-influenced text is
+ * unpredictable, so on ANY send failure we retry once as plain text
+ * (no parse_mode). A card with literal `*`/`>`/`||` markers beats no
+ * card at all. Only if the plain retry also fails do we give up and log.
  */
 async function sendCard(
   ctx: Context,

@@ -47,12 +47,44 @@ describe("renderSoulCard", () => {
     const out = renderSoulCard(soulRow(), "es");
     assert.ok(out !== null);
     assert.ok(out.includes("🃏 *El Arquitecto de la Medianoche*"));
-    assert.ok(out.includes("Josep (@vidal)"));
+    // MarkdownV2 escapes the ( ) around the handle.
+    assert.ok(out.includes("Josep \\(@vidal\\)"));
     assert.ok(out.includes("📊 *Estadísticas*"));
     assert.ok(out.includes("✨ *Esencia*"));
     assert.ok(out.includes("🔮 *Rasgos*"));
     assert.ok(out.includes("🌀 *Manías*"));
     assert.ok(out.includes("⚔️ *Habilidades*"));
+  });
+
+  it("wraps the card body in an expandable blockquote", () => {
+    const out = renderSoulCard(soulRow(), "es");
+    assert.ok(out !== null);
+    const lines = out.split("\n");
+    // Header lines (title, member) are NOT quoted — always visible.
+    assert.ok(lines[0]?.startsWith("🃏 "));
+    assert.ok(lines[1]?.startsWith("Josep "));
+    // Exactly one line opens the expandable quote with `**>`.
+    const openerIdx = lines.findIndex((l) => l.startsWith("**>"));
+    assert.ok(openerIdx >= 0, "expected a **> opener");
+    assert.equal(
+      lines.filter((l) => l.startsWith("**>")).length,
+      1,
+      "the **> marker must appear exactly once",
+    );
+    // The last line closes the expandable quote with `||`.
+    assert.ok(out.endsWith("||"));
+    // Every line from the opener onward is `>`-prefixed so the quote is
+    // one contiguous block (a non-quoted line would split it in two).
+    for (const line of lines.slice(openerIdx)) {
+      assert.ok(
+        line.startsWith(">") || line.startsWith("**>"),
+        `body line not quoted: ${JSON.stringify(line)}`,
+      );
+    }
+    // No header line before the opener is quoted.
+    for (const line of lines.slice(0, openerIdx)) {
+      assert.ok(!line.startsWith(">"), `header line was quoted: ${line}`);
+    }
   });
 
   it("never renders the internal notes field", () => {
@@ -107,8 +139,9 @@ describe("renderSoulCard", () => {
     assert.ok(out.includes("📊 *Stats*"));
     assert.ok(out.includes("✨ *Essence*"));
     assert.ok(out.includes("🔮 *Traits*"));
-    assert.ok(out.includes("updated 2026-05-22"));
-    assert.ok(out.includes("evolution #14"));
+    assert.ok(out.includes("updated 2026\\-05\\-22"));
+    // MarkdownV2 escapes the # in the footer.
+    assert.ok(out.includes("evolution \\#14"));
   });
 
   it("includes the catchphrase when present and omits it otherwise", () => {
@@ -125,11 +158,22 @@ describe("renderSoulCard", () => {
     assert.ok(!without.includes("“"));
   });
 
+  it("keeps the catchphrase in the always-visible header, not the quote", () => {
+    const out = renderSoulCard(soulRow(), "es");
+    assert.ok(out !== null);
+    const lines = out.split("\n");
+    const phraseLine = lines.find((l) => l.includes("fumando"));
+    assert.ok(phraseLine !== undefined);
+    // The catchphrase is a header line — not `>`-quoted.
+    assert.ok(!phraseLine.startsWith(">"));
+    assert.ok(!phraseLine.startsWith("**>"));
+  });
+
   it("shows just the first name when the member has no @handle", () => {
     const out = renderSoulCard(soulRow({ username: undefined }), "es");
     assert.ok(out !== null);
     assert.ok(out.includes("Josep"));
-    assert.ok(!out.includes("(@"));
+    assert.ok(!out.includes("\\(@"));
   });
 
   it("returns null for a legacy free-text soul", () => {
@@ -139,14 +183,14 @@ describe("renderSoulCard", () => {
     );
   });
 
-  it("escapes Markdown metacharacters in member-written card text", () => {
+  it("escapes MarkdownV2 metacharacters in member-written card text", () => {
     const out = renderSoulCard(
       soulRow({
         soul_text: encodeNewlines(
           serialiseSoulCard(
             card({
               title: "El *Falso* Negrita",
-              essence: "Usa _cursiva_ y `código` para colarla.",
+              essence: "Cita (con) puntos. y guion-bajo_ y #hash.",
             }),
           ),
         ),
@@ -157,15 +201,16 @@ describe("renderSoulCard", () => {
     // The literal metacharacters from card text are backslash-escaped;
     // the title's own surrounding * (our styling) stay unescaped.
     assert.ok(out.includes("El \\*Falso\\* Negrita"));
-    assert.ok(out.includes("\\_cursiva\\_"));
-    assert.ok(out.includes("\\`código\\`"));
+    assert.ok(out.includes("\\(con\\)"));
+    assert.ok(out.includes("puntos\\."));
+    assert.ok(out.includes("guion\\-bajo\\_"));
+    assert.ok(out.includes("\\#hash"));
   });
 
-  it("escapes a literal backslash so the shrug kaomoji doesn't break Markdown", () => {
-    // ¯\_(ツ)_/¯ — backslash + underscore. Without escaping the
-    // backslash, esc would emit `\\_`: Telegram reads `\\` as a literal
-    // backslash, leaving an UNBALANCED `_` → 400. The backslash must be
-    // doubled to `\\\\` so the underscore's own escape `\_` stands.
+  it("escapes a literal backslash so the shrug kaomoji doesn't break parsing", () => {
+    // ¯\_(ツ)_/¯ — backslash + underscore + parens. Each literal `\`
+    // must become `\\` so it doesn't dangle as an escape; each `_` `(`
+    // `)` becomes `\_` `\(` `\)`.
     const out = renderSoulCard(
       soulRow({
         soul_text: encodeNewlines(
@@ -175,10 +220,10 @@ describe("renderSoulCard", () => {
       "es",
     );
     assert.ok(out !== null);
-    // Each literal `\` becomes `\\`, each `_` becomes `\_`.
-    assert.ok(out.includes("¯\\\\\\_(ツ)\\_/¯"));
-    // Every styling metacharacter pair stays balanced (even count of
-    // unescaped `*` and `_` — escaped ones are `\*` / `\_`).
+    // Literal `\` → `\\`, `_` → `\_`, `(` → `\(`, `)` → `\)`.
+    assert.ok(out.includes("¯\\\\\\_\\(ツ\\)\\_/¯"));
+    // Styling metacharacters stay balanced — even count of unescaped
+    // `*` and `_` (escaped ones are preceded by a backslash).
     const unescapedStars = (out.match(/(?<!\\)\*/g) ?? []).length;
     const unescapedUnders = (out.match(/(?<!\\)_/g) ?? []).length;
     assert.equal(unescapedStars % 2, 0);
@@ -189,8 +234,11 @@ describe("renderSoulCard", () => {
     // Every visible field at its zod cap, filled with ordinary text (a
     // sprinkling of metacharacters, as real card text has). `notes` is
     // excluded from the render, so the visible content caps at ~2.6k and
-    // the card stays well under Telegram's 4096 limit even after escaping.
-    const fill = (n: number): string => "palabra del alma_".repeat(n).slice(0, n);
+    // an ordinary card stays under Telegram's 4096 limit after escaping.
+    // A pathological all-metacharacter card CAN exceed 4096 — that case
+    // is handled by sendCard's plain-text fallback, not by this cap.
+    const fill = (n: number): string =>
+      "palabra del alma_".repeat(n).slice(0, n);
     const maxed = card({
       title: fill(80),
       essence: fill(400),
@@ -210,8 +258,7 @@ describe("renderSoulCard", () => {
         out.length <= 4096,
         `${language} card was ${String(out.length)} chars`,
       );
-      assert.ok(out.includes(language === "en" ? "evolution #" : "evolución nº"));
+      assert.ok(out.includes(language === "en" ? "evolution \\#" : "evolución nº"));
     }
   });
-
 });
