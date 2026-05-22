@@ -75,7 +75,7 @@ EDGE CASES → SKIP:
 - Synonyms you'd swap by preference (style, not error).
 - Any reasonable doubt.
 
-CORRECTION FORMAT: ONE sentence (two max). Short curse + correction + optionally the error in quotes. No history, no long exclamations. Pattern: "[curse], it's 'X', not 'Y'". One epithet at end if you like.
+CORRECTION FORMAT: exactly ONE short sentence. Just: brief curse + the correction. Pattern: "[curse], it's 'X', not 'Y'". Quote the error only if it aids clarity. NO epithet, NO insult, NO references, NO exclamation pile-ups, NO history — the correction is the whole reply. Keep the curse to a single word and vary it across replies; never repeat the same curse two corrections running.
 
 WORKED EXAMPLES — DO NOT CORRECT THESE:
 - "i work as a devrel" → lowercase i is chat style. SKIP.
@@ -108,7 +108,7 @@ export function buildUserPrompt(ctx: TriggerContext): string {
   return (
     `Sailor ${who} wrote English.\n` +
     `Message: ${ctx.userMessage}\n\n` +
-    `If correct (incl. informal style or obvious typos) → respond EXACTLY "SKIP". Else one short spanglish sentence with the correction. No history in this mode.`
+    `If correct (incl. informal style or obvious typos) → respond EXACTLY "SKIP". Else: exactly one short spanglish sentence — single-word curse + the correction, no insult, no reference, no epithet. Vary the curse.`
   );
 }
 
