@@ -90,15 +90,30 @@ describe("SYSTEM_PROMPT", () => {
     // "corrected" by removing "the". Adding/removing an article is a
     // style choice, not an error.
     assert.ok(SYSTEM_PROMPT.includes("wall of shame prize"));
-    assert.ok(/present, correct article/i.test(SYSTEM_PROMPT));
+    assert.ok(/present, correct/i.test(SYSTEM_PROMPT));
   });
-  it("has a two-question gate that defaults correction mode to SKIP", () => {
-    // The enumerated NEVER-list wasn't holding — five false
-    // corrections in. The gate converts it into two yes/no questions
-    // that must both pass before any correction.
-    assert.ok(/THE GATE/.test(SYSTEM_PROMPT));
-    assert.ok(/Q1\./.test(SYSTEM_PROMPT) && /Q2\./.test(SYSTEM_PROMPT));
-    assert.ok(/Casing is NEVER an error/i.test(SYSTEM_PROMPT));
+  it("has a closed whitelist of exactly four correctable error types", () => {
+    // The enumerated NEVER-list and the two-question gate both failed —
+    // seven false corrections in. The whitelist inverts the logic: the
+    // model may correct ONLY four named categories; everything else is
+    // SKIP by default.
+    assert.ok(/THE WHITELIST/.test(SYSTEM_PROMPT));
+    assert.ok(/VERB TENSE/.test(SYSTEM_PROMPT));
+    assert.ok(/SUBJECT.VERB AGREEMENT/.test(SYSTEM_PROMPT));
+    assert.ok(/FALSE FRIEND/.test(SYSTEM_PROMPT));
+    assert.ok(/MISSING OBLIGATORY ARTICLE/.test(SYSTEM_PROMPT));
+  });
+  it("treats hyphenation as never an error", () => {
+    // Regression test for "actual real world" → wrongly "corrected" to
+    // "actual real-world". Open/hyphenated/closed compounds are all fine.
+    assert.ok(/HYPHENATION/.test(SYSTEM_PROMPT));
+    assert.ok(SYSTEM_PROMPT.includes("actual real world"));
+  });
+  it("treats contractions and their expansions as equally correct", () => {
+    // Regression test for "if you're technical" → wrongly "corrected"
+    // to "if you are technical". Contracting/expanding is a style choice.
+    assert.ok(/CONTRACTIONS/.test(SYSTEM_PROMPT));
+    assert.ok(SYSTEM_PROMPT.includes("if you're technical"));
   });
 });
 
