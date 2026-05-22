@@ -6,6 +6,7 @@ import {
 import { Bot } from "grammy";
 import cron from "node-cron";
 import { buildRpv } from "./commands/rpv.js";
+import { buildSoul } from "./commands/soul.js";
 import { loadConfig } from "./config.js";
 import { runDailyResume } from "./crons/daily-resume.js";
 import { runDailySouls } from "./crons/daily-souls.js";
@@ -142,6 +143,10 @@ async function main(): Promise<void> {
       command: "rpv",
       description: "Summarise last N messages, or ask a question",
     },
+    {
+      command: "soul",
+      description: "Show a member's soul card — /soul @username",
+    },
   ]);
 
   const groupCooldown = createCooldown(config.rpvGroupCooldownSeconds * 1000);
@@ -150,6 +155,8 @@ async function main(): Promise<void> {
     "rpv",
     buildRpv({ services, gemini, config, groupCooldown, userCooldown }),
   );
+  // /soul is a read-only sheet lookup with no Gemini call — no cooldown.
+  bot.command("soul", buildSoul({ services, config }));
 
   bot.on("message:text", (ctx) => {
     const text = ctx.message.text;
