@@ -151,6 +151,25 @@ importers:
         specifier: ^4.19.2
         version: 4.21.0
 
+  apps/luditabot:
+    dependencies:
+      '@simios/env':
+        specifier: workspace:*
+        version: link:../../packages/env
+      '@simios/telegram-kit':
+        specifier: workspace:*
+        version: link:../../packages/telegram-kit
+      grammy:
+        specifier: ^1.32.0
+        version: 1.42.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+
   packages/env:
     dependencies:
       zod:

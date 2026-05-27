@@ -23,7 +23,7 @@ At Friday 00:00 local time the bot announces "Pirate Day begins!" in the configu
 2. Is today Friday in `Europe/Madrid`? If not, drop.
 3. Detect the message language with `tinyld` (offline, no API call).
 4. Spanish → insult mode. English → correction mode. Anything else → drop.
-5. Cooldown gate: at most one fire per `COOLDOWN_SECONDS` (default 60).
+5. Cooldown gate: at most one fire per `COOLDOWN_SECONDS` (default 30).
 6. Call Gemini 2.5 Flash with a system prompt that defines the persona and either modus operandi.
 7. If the model returns `SKIP` (its sentinel for "this English is fine"), the bot stays quiet.
 

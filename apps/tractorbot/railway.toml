@@ -16,3 +16,4 @@ healthcheckTimeout = 60
 # stop the old replica before starting the new one. Brief downtime
 # during deploys, but no 409 crashes.
 overlapSeconds = 0
+drainingSeconds = 0

@@ -25,7 +25,7 @@ These are non-negotiable in this repo, enforced by ESLint:
 
 ### 3. Per-app rules (apply to every `apps/<bot>/`)
 
-The monorepo currently hosts four bots: `ciclobot` (weightlifting tracker, sheets-backed), `tractorbot` (trigger-word image generation), `los_piratas_bot` (English-Friday persona), `rpvbot` (Capitán RPV — daily group chronicler + `/rpv N` on-demand summary). The rules below apply to all four and to any future bot.
+The monorepo currently hosts five bots: `ciclobot` (weightlifting tracker, sheets-backed), `tractorbot` (trigger-word image generation), `luditabot` (trigger-word anti-technology image generation), `los_piratas_bot` (English-Friday persona), `rpvbot` (Capitán RPV — daily group chronicler + `/rpv N` on-demand summary). The rules below apply to all five and to any future bot.
 
 - **One command per file** under `apps/<bot>/src/commands/` (`log.ts`, `weight.ts`, `join.ts`, `crew.ts`, …). Don't bundle multiple commands into one file.
 - **One sheet tab per file** under `apps/<bot>/src/sheets/`. Each file defines a `createTable(...)` factory using `defineTable` from `@simios/sheets-client`. Don't hand-roll the `listAll`/`upsert`/`removeByKey` shapes.
@@ -95,6 +95,7 @@ Railway CLI is available globally. To stream logs from the active service:
 ```bash
 railway logs --service ciclobot
 railway logs --service tractorbot
+railway logs --service luditabot
 ```
 
 For `los_piratas_bot`: its Railway service was named `piaratasbot` (with a typo) at creation time and the name has stuck. Use the service UUID instead of the name to avoid confusion:
@@ -146,6 +147,11 @@ ciclobot: long polling started
 ```
 tractorbot starting — chat <CHAT_ID>, model gemini-2.5-flash-image
 tractorbot: long polling started
+```
+
+```
+luditabot starting - chat <CHAT_ID>, model gemini-2.5-flash-image
+luditabot: long polling started
 ```
 
 ```
