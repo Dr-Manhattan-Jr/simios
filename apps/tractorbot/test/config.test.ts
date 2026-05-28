@@ -7,6 +7,8 @@ const ENV_KEYS = [
   "GEMINI_API_KEY",
   "CHAT_ID",
   "TRIGGER_WORDS",
+  "TRACTOR_TRIGGER_WORDS",
+  "LUDDITE_TRIGGER_WORDS",
   "COOLDOWN_SECONDS",
   "GEMINI_MODEL",
 ] as const;
@@ -36,7 +38,10 @@ describe("loadConfig", () => {
     assert.equal(config.botToken, "abc:def");
     assert.equal(config.geminiApiKey, "key-123");
     assert.equal(config.chatId, -1001234567890);
-    assert.deepEqual(config.triggerWords, ["claude", "claudio"]);
+    assert.deepEqual(config.triggerGroups, [
+      { theme: "tractor", words: ["claude", "claudio"] },
+      { theme: "luddite", words: ["ludita", "luditas", "luddite", "luddites"] },
+    ]);
     assert.equal(config.cooldownSeconds, 60);
     assert.equal(config.geminiModel, "gemini-2.5-flash-image");
   });
@@ -65,29 +70,75 @@ describe("loadConfig", () => {
     );
   });
 
-  it("parses custom trigger words (lowercased, trimmed)", () => {
+  it("parses custom tractor trigger words", () => {
     const config = withEnv(
       {
         BOT_TOKEN: "abc",
         GEMINI_API_KEY: "k",
         CHAT_ID: "-1",
-        TRIGGER_WORDS: "Foo, Bar ,BAZ",
+        TRACTOR_TRIGGER_WORDS: "Foo, Bar ,BAZ",
       },
       () => loadConfig(),
     );
-    assert.deepEqual(config.triggerWords, ["foo", "bar", "baz"]);
+    assert.deepEqual(config.triggerGroups[0], {
+      theme: "tractor",
+      words: ["foo", "bar", "baz"],
+    });
   });
 
-  it("rejects empty TRIGGER_WORDS", () => {
+  it("keeps TRIGGER_WORDS as a legacy alias for tractor triggers", () => {
+    const config = withEnv(
+      {
+        BOT_TOKEN: "abc",
+        GEMINI_API_KEY: "k",
+        CHAT_ID: "-1",
+        TRIGGER_WORDS: "old, alias",
+      },
+      () => loadConfig(),
+    );
+    assert.deepEqual(config.triggerGroups[0], {
+      theme: "tractor",
+      words: ["old", "alias"],
+    });
+  });
+
+  it("parses custom luddite trigger words", () => {
+    const config = withEnv(
+      {
+        BOT_TOKEN: "abc",
+        GEMINI_API_KEY: "k",
+        CHAT_ID: "-1",
+        LUDDITE_TRIGGER_WORDS: "Ludita, Analogico",
+      },
+      () => loadConfig(),
+    );
+    assert.deepEqual(config.triggerGroups[1], {
+      theme: "luddite",
+      words: ["ludita", "analogico"],
+    });
+  });
+
+  it("rejects empty trigger word lists", () => {
     withEnv(
       {
         BOT_TOKEN: "abc",
         GEMINI_API_KEY: "k",
         CHAT_ID: "-1",
-        TRIGGER_WORDS: " , , ",
+        TRACTOR_TRIGGER_WORDS: " , , ",
       },
       () => {
-        assert.throws(() => loadConfig(), /TRIGGER_WORDS/);
+        assert.throws(() => loadConfig(), /TRACTOR_TRIGGER_WORDS/);
+      },
+    );
+    withEnv(
+      {
+        BOT_TOKEN: "abc",
+        GEMINI_API_KEY: "k",
+        CHAT_ID: "-1",
+        LUDDITE_TRIGGER_WORDS: " , , ",
+      },
+      () => {
+        assert.throws(() => loadConfig(), /LUDDITE_TRIGGER_WORDS/);
       },
     );
   });

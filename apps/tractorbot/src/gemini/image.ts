@@ -25,29 +25,37 @@ const ResponseSchema = z.object({
     .min(1),
 });
 
-export interface GeminiImage {
-  readonly mimeType: string;
-  readonly bytes: Buffer;
-}
+const GeminiImageSchema = z.object({
+  mimeType: z.string().min(1),
+  bytes: z.instanceof(Buffer),
+});
+export type GeminiImage = z.infer<typeof GeminiImageSchema>;
 
-export interface GeminiImageClient {
-  generate(prompt: string): Promise<GeminiImage>;
-}
+const GeminiImageClientSchema = z.object({
+  generate: z.function().args(z.string()).returns(z.promise(GeminiImageSchema)),
+});
+export type GeminiImageClient = z.infer<typeof GeminiImageClientSchema>;
 
-export function createGeminiImageClient(params: {
-  readonly apiKey: string;
-  readonly model: string;
-}): GeminiImageClient {
+const GeminiImageClientParamsSchema = z.object({
+  apiKey: z.string().min(1),
+  model: z.string().min(1),
+});
+type GeminiImageClientParams = z.infer<typeof GeminiImageClientParamsSchema>;
+
+export function createGeminiImageClient(
+  params: GeminiImageClientParams,
+): GeminiImageClient {
+  const parsedParams = GeminiImageClientParamsSchema.parse(params);
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
-    `${encodeURIComponent(params.model)}:generateContent`;
+    `${encodeURIComponent(parsedParams.model)}:generateContent`;
   return {
     async generate(prompt: string): Promise<GeminiImage> {
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": params.apiKey,
+          "x-goog-api-key": parsedParams.apiKey,
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
@@ -69,10 +77,10 @@ export function createGeminiImageClient(params: {
       for (const candidate of parsed.data.candidates) {
         for (const part of candidate.content.parts) {
           if ("inlineData" in part) {
-            return {
+            return GeminiImageSchema.parse({
               mimeType: part.inlineData.mimeType,
               bytes: Buffer.from(part.inlineData.data, "base64"),
-            };
+            });
           }
         }
       }

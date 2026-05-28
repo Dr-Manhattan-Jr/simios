@@ -6,19 +6,28 @@ import {
 import { Bot, InputFile } from "grammy";
 import { loadConfig } from "./config.js";
 import { createGeminiImageClient } from "./gemini/image.js";
-import { buildPromptParts, renderPrompt } from "./domain/prompt.js";
+import {
+  buildPromptParts,
+  imageFilenameForPrompt,
+  renderCaption,
+  renderPrompt,
+} from "./domain/prompt.js";
 import {
   compileTriggers,
+  findTriggerMatch,
   extractUserHint,
-  matchesTrigger,
+  triggerWordsForTheme,
 } from "./domain/trigger.js";
 
 async function main(): Promise<void> {
   console.log("tractorbot: validating environment…");
   const config = loadConfig();
+  const triggerSummary = config.triggerGroups
+    .map((group) => `${group.theme}:${group.words.join("/")}`)
+    .join(", ");
   console.log(
     `tractorbot: environment OK (chat ${String(config.chatId)}, ` +
-      `triggers ${config.triggerWords.join("/")}, cooldown ${String(config.cooldownSeconds)}s)`,
+      `triggers ${triggerSummary}, cooldown ${String(config.cooldownSeconds)}s)`,
   );
 
   const gemini = createGeminiImageClient({
@@ -26,7 +35,7 @@ async function main(): Promise<void> {
     model: config.geminiModel,
   });
 
-  const triggerPatterns = compileTriggers(config.triggerWords);
+  const triggerPatterns = compileTriggers(config.triggerGroups);
   const bot = new Bot(config.botToken);
   bot.use(onlyChat(config.chatId));
 
@@ -35,7 +44,8 @@ async function main(): Promise<void> {
 
   bot.on("message:text", async (ctx) => {
     const text = ctx.message.text;
-    if (!matchesTrigger(text, triggerPatterns)) return;
+    const match = findTriggerMatch(text, triggerPatterns);
+    if (match === undefined) return;
 
     const now = Date.now();
     if (now - lastFiredAt < config.cooldownSeconds * 1000) return;
@@ -43,22 +53,21 @@ async function main(): Promise<void> {
     lastFiredAt = now;
     inFlight = true;
 
-    const parts = buildPromptParts();
-    const userHint = extractUserHint(text, config.triggerWords);
+    const parts = buildPromptParts(match.theme);
+    const userHint = extractUserHint(
+      text,
+      triggerWordsForTheme(config.triggerGroups, match.theme),
+    );
     const prompt = renderPrompt(parts, userHint);
     console.log(
-      `tractorbot: triggered${userHint === undefined ? "" : ` (hint="${userHint}")`}, prompt="${prompt}"`,
+      `tractorbot: triggered ${match.theme}/${match.word}${userHint === undefined ? "" : ` (hint="${userHint}")`}, prompt="${prompt}"`,
     );
 
     try {
       await ctx.replyWithChatAction("upload_photo");
       const image = await gemini.generate(prompt);
-      const caption =
-        userHint === undefined
-          ? `🐒🚜 ${parts.style}`
-          : `🐒🚜 ${parts.style} — "${userHint}"`;
-      await ctx.replyWithPhoto(new InputFile(image.bytes, "tractor.png"), {
-        caption,
+      await ctx.replyWithPhoto(new InputFile(image.bytes, imageFilenameForPrompt(parts)), {
+        caption: renderCaption(parts, userHint),
         reply_parameters: { message_id: ctx.message.message_id },
       });
     } catch (err) {
