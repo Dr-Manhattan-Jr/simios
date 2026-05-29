@@ -51,6 +51,7 @@ describe("module loading smoke test", () => {
       import("../src/commands/participants.js"),
       import("../src/commands/log.js"),
       import("../src/commands/weight.js"),
+      import("../src/commands/height.js"),
       import("../src/commands/week.js"),
       import("../src/commands/history.js"),
       import("../src/commands/undo.js"),

@@ -22,6 +22,7 @@ import { buildLeave } from "./commands/leave.js";
 import { buildParticipants } from "./commands/participants.js";
 import { buildLog } from "./commands/log.js";
 import { buildWeight } from "./commands/weight.js";
+import { buildHeight } from "./commands/height.js";
 import { buildWeek } from "./commands/week.js";
 import { buildHistory } from "./commands/history.js";
 import { buildUndo } from "./commands/undo.js";
@@ -49,6 +50,7 @@ async function main(): Promise<void> {
     { command: "leave", description: "Leave the challenge" },
     { command: "log", description: "Log a lift or triathlon session: /log <lift> <kg> <made|missed> or /log <bike|swim|run> <km> <time>" },
     { command: "weight", description: "Log body weight: /weight <kg>" },
+    { command: "height", description: "Update height: /height <cm>" },
     { command: "week", description: "Show this week's table" },
     { command: "history", description: "Show your last 8 weeks" },
     { command: "undo", description: "Undo this week's entry: /undo <lift|bodyweight|bike|swim|run>" },
@@ -63,6 +65,7 @@ async function main(): Promise<void> {
   bot.command("participants", buildParticipants(services));
   bot.command("log", buildLog(services));
   bot.command("weight", buildWeight(services));
+  bot.command("height", buildHeight(services));
   bot.command("week", buildWeek(services));
   bot.command("history", buildHistory(services));
   bot.command("undo", buildUndo(services));

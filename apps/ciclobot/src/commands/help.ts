@@ -7,7 +7,8 @@ const HELP_TEXT = `🏋️ ciclobot — weekly 5×5 tracker
 1. /join — opt in (asks your height + weight)
 2. /log bench 100 made — your first lift
 3. /weight 82.5 — your weekly body weight
-4. /week — see the group's table
+4. /height 178 — update your height
+5. /week — see the group's table
 
 That's it. Re-log to overwrite. Sunday 19:00 the bot pings whoever's missing required entries.
 
@@ -17,6 +18,7 @@ Logging
 /log <lift> <kg> <made|missed> — e.g. /log bench 100 made
 /log <bike|swim|run> <km> <time> — e.g. /log bike 40 1:05:00
 /weight <kg> — this week's body weight
+/height <cm> — update your height
 /undo <lift|bodyweight|bike|swim|run> — delete this week's entry
 
 "made" = you hit all 5 sets × 5 reps cleanly.

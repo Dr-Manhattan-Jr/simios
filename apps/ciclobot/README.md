@@ -81,6 +81,7 @@ In your Telegram group:
 ```
 /help        — should print the full instructions
 /join        — bot asks for your height (cm), then body weight (kg)
+/height 178 — updates your height (cm)
 /log bench 100 yes
 /log bike 40 1:05:00
 /week        — shows the current week's table
