@@ -15,8 +15,19 @@ describe("parseTarget", () => {
       lift: "clean_and_jerk",
     });
   });
+  it("recognizes triathlon disciplines", () => {
+    assert.deepEqual(parseTarget("bike"), {
+      kind: "discipline",
+      discipline: "bike",
+    });
+    assert.deepEqual(parseTarget("SWIM"), {
+      kind: "discipline",
+      discipline: "swim",
+    });
+  });
   it("rejects unknowns", () => {
     assert.equal(parseTarget("muscleups"), undefined);
+    assert.equal(parseTarget("cycling"), undefined);
     assert.equal(parseTarget(""), undefined);
   });
 });

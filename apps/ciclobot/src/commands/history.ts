@@ -1,9 +1,16 @@
 import { parseTelegramUser } from "@simios/telegram-kit";
 import type { BotContext } from "../context.js";
 import type { Services } from "../services.js";
+import { ALL_DISCIPLINES, type Discipline } from "../domain/discipline.js";
 import { ALL_LIFTS, type Lift } from "../domain/lifts.js";
 import type { LogEntry } from "../domain/log-entry.js";
 import type { BodyweightEntry } from "../domain/bodyweight.js";
+import {
+  descLoggedAt,
+  formatDuration,
+  velocityKmh,
+  type TriathlonEntry,
+} from "../domain/triathlon.js";
 import { descIsoWeek, parseTarget } from "../domain/target.js";
 
 const WEEKS_TO_SHOW = 8;
@@ -26,7 +33,8 @@ export function buildHistory(services: Services) {
       const target = parseTarget(arg);
       if (target === undefined) {
         await ctx.reply(
-          `Unknown filter "${arg}". Use one of: ${ALL_LIFTS.join(", ")}, bodyweight, or no argument.`,
+          `Unknown filter "${arg}". Use one of: ${ALL_LIFTS.join(", ")}, ` +
+            `bodyweight, ${ALL_DISCIPLINES.join(", ")}, or no argument.`,
         );
         return;
       }
@@ -34,6 +42,18 @@ export function buildHistory(services: Services) {
         const all = await services.bodyweight.listAll();
         const mine = all.filter((b) => b.user_id === user.user_id);
         await ctx.reply(formatBodyweight(takeRecent(mine)));
+        return;
+      }
+      if (target.kind === "discipline") {
+        const { discipline } = target;
+        const all = await services.triathlon.listAll();
+        const mine = all
+          .filter(
+            (s) => s.user_id === user.user_id && s.discipline === discipline,
+          )
+          .sort(descLoggedAt)
+          .slice(0, WEEKS_TO_SHOW);
+        await ctx.reply(formatTriathlon(mine, discipline));
         return;
       }
       const all = await services.log.listAll();
@@ -92,4 +112,17 @@ function formatBodyweight(rows: BodyweightEntry[]): string {
   if (rows.length === 0) return "No bodyweight entries yet.";
   const lines = rows.map((r) => `${r.iso_week}: ${String(r.weight_kg)}kg`);
   return `Your last ${String(WEEKS_TO_SHOW)} bodyweight entries:\n${lines.join("\n")}`;
+}
+
+function formatTriathlon(
+  rows: TriathlonEntry[],
+  discipline: Discipline,
+): string {
+  if (rows.length === 0) return `No ${discipline} sessions yet.`;
+  const lines = rows.map(
+    (r) =>
+      `${r.iso_week}: ${String(r.distance_km)}km in ` +
+      `${formatDuration(r.duration_seconds)} (${velocityKmh(r).toFixed(1)} km/h)`,
+  );
+  return `Your last ${String(rows.length)} ${discipline} sessions:\n${lines.join("\n")}`;
 }

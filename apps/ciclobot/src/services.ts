@@ -15,6 +15,10 @@ import {
   createTable as createBodyweightTable,
   type BodyweightTable,
 } from "./sheets/bodyweight.js";
+import {
+  createTable as createTriathlonTable,
+  type TriathlonTable,
+} from "./sheets/triathlon.js";
 
 export interface Services {
   readonly config: Config;
@@ -22,6 +26,7 @@ export interface Services {
   readonly participants: ParticipantsTable;
   readonly log: LogTable;
   readonly bodyweight: BodyweightTable;
+  readonly triathlon: TriathlonTable;
 }
 
 export function createServices(config: Config): Services {
@@ -35,6 +40,7 @@ export function createServices(config: Config): Services {
     participants: createParticipantsTable(sheets),
     log: createLogTable(sheets),
     bodyweight: createBodyweightTable(sheets),
+    triathlon: createTriathlonTable(sheets),
   };
 }
 
@@ -43,5 +49,6 @@ export async function ensureSheetsReady(services: Services): Promise<void> {
     services.participants.ensure(),
     services.log.ensure(),
     services.bodyweight.ensure(),
+    services.triathlon.ensure(),
   ]);
 }

@@ -166,6 +166,13 @@ export interface Table<TEntry, TKey> {
   listAll(): Promise<TEntry[]>;
   findByKey(key: TKey): Promise<TEntry | undefined>;
   upsert(entry: TEntry): Promise<void>;
+  /**
+   * Append a row unconditionally, without the read-then-dedup that `upsert`
+   * does. Use this for append-only tables whose key is unique by construction
+   * (so there is never an existing row to overwrite) — it saves a full-tab read
+   * on every write.
+   */
+  append(entry: TEntry): Promise<void>;
   removeByKey(key: TKey): Promise<boolean>;
 }
 
@@ -215,6 +222,9 @@ export function defineTable<TEntry, TKey>(
       } else {
         await client.updateRow(def.tab, existing.rowIndex, row);
       }
+    },
+    async append(entry) {
+      await client.append(def.tab, def.rowFromEntry(entry));
     },
     async removeByKey(key) {
       const indexed = await listIndexed();

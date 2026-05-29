@@ -15,17 +15,21 @@ That's it. Re-log to overwrite. Sunday 19:00 the bot pings whoever's missing req
 
 Logging
 /log <lift> <kg> <made|missed> — e.g. /log bench 100 made
+/log <bike|swim|run> <km> <time> — e.g. /log bike 40 1:05:00
 /weight <kg> — this week's body weight
-/undo <lift|bodyweight> — delete this week's entry
+/undo <lift|bodyweight|bike|swim|run> — delete this week's entry
 
 "made" = you hit all 5 sets × 5 reps cleanly.
 "missed" = you failed any rep (5×3 instead of 5×5, missed reps in the last set, etc.).
 y/n, yes/no, ✅/❌ also accepted.
 
+Triathlon sessions are append-only: log as many bike/swim/run sessions per week as you like. Distance is always km (swim too, e.g. 1.5). Time accepts HH:MM:SS (1:05:00), MM:SS (52:30), or minutes (52m). Velocity (km/h) is computed for you. /undo bike removes your latest bike session this week.
+
 Viewing
 /week — this week, everyone
 /history — your last 8 weeks
 /history <lift> — filtered to one lift
+/history <bike|swim|run> — your recent sessions for that discipline
 /history bodyweight — your weekly bodyweight history
 /participants — who's in the challenge
 

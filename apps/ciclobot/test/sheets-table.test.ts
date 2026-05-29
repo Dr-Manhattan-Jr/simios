@@ -73,6 +73,30 @@ describe("defineTable", () => {
     ]);
   });
 
+  it("append adds a row unconditionally, even when the key already exists", async () => {
+    const client = fakeClient();
+    const table = defineTable<FakeRow, number>(client, {
+      tab: "fake",
+      header: ["id", "name"],
+      parseRow(row) {
+        const name = row[1] ?? "";
+        const base = { id: Number(row[0] ?? "0") };
+        return name.length > 0 ? { ...base, name } : base;
+      },
+      rowFromEntry: (e) => [String(e.id), e.name ?? ""],
+      keyOf: (e) => e.id,
+      keysEqual: (a, b) => a === b,
+    });
+
+    await table.append({ id: 1, name: "first" });
+    await table.append({ id: 1, name: "second" });
+    // upsert would have overwritten; append keeps both rows for the same key.
+    assert.deepEqual(client.tabs.get("fake"), [
+      ["1", "first"],
+      ["1", "second"],
+    ]);
+  });
+
   it("findByKey returns the entry or undefined", async () => {
     const client = fakeClient();
     const table = defineTable<FakeRow, number>(client, {

@@ -1,12 +1,18 @@
+import { parseDiscipline, type Discipline } from "./discipline.js";
 import { parseLift, type Lift } from "./lifts.js";
 
 const BODYWEIGHT_ALIASES = new Set(["bodyweight", "bw"]);
 
-export type Target = { kind: "lift"; lift: Lift } | { kind: "bodyweight" };
+export type Target =
+  | { kind: "lift"; lift: Lift }
+  | { kind: "bodyweight" }
+  | { kind: "discipline"; discipline: Discipline };
 
 export function parseTarget(arg: string): Target | undefined {
   const normalized = arg.trim().toLowerCase();
   if (BODYWEIGHT_ALIASES.has(normalized)) return { kind: "bodyweight" };
+  const discipline = parseDiscipline(normalized);
+  if (discipline !== undefined) return { kind: "discipline", discipline };
   const lift = parseLift(normalized);
   return lift === undefined ? undefined : { kind: "lift", lift };
 }

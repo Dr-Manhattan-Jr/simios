@@ -2,15 +2,16 @@
 
 ![ciclobot](./docs/banner.png)
 
-Telegram bot that tracks a small group's weekly 5×5 weightlifting numbers in a Google Sheet, and nudges anyone who hasn't logged by Sunday evening.
+Telegram bot that tracks a small group's weekly 5×5 weightlifting numbers and triathlon training in a Google Sheet, and nudges anyone who hasn't logged by Sunday evening.
 
 ## What it does
 
 - **Lifts tracked.** `bench`, `squat`, `deadlift` are *required* (you'll be reminded). `clean_and_jerk`, `snatch` are *optional* (logged opportunistically, never reminded).
-- **Each entry** = working weight in kg + whether you completed all 5 sets.
+- **Each lift entry** = working weight in kg + whether you completed all 5 sets.
+- **Triathlon sessions.** `bike`, `swim`, `run` — each logged as distance (km) + elapsed time, with average velocity (km/h) computed. Unlike lifts, sessions are **append-only**: log as many per week as you train.
 - **Body weight** logged once per week (kg).
 - **Reminder** posted Sunday at 19:00 Europe/Madrid, tagging only people missing required entries.
-- **Storage** is a single Google Sheet with three tabs (`participants`, `log`, `bodyweight`). Everyone in the group can view the sheet directly.
+- **Storage** is a single Google Sheet with four tabs (`participants`, `log`, `bodyweight`, `triathlon`). Everyone in the group can view the sheet directly.
 
 Commands: `/help` shows the full list inside the bot.
 
@@ -43,7 +44,7 @@ If the JSON is empty, the bot hasn't seen any updates yet — try sending anothe
 
 1. Go to [Google Sheets](https://sheets.new) and create a new spreadsheet. Name it whatever you like (e.g. "ciclobot data").
 2. Note the **spreadsheet ID** from the URL: `https://docs.google.com/spreadsheets/d/<THIS_IS_THE_ID>/edit`. You'll use this as `SHEET_ID`.
-3. The bot will create the three tabs (`participants`, `log`, `bodyweight`) and write headers automatically on first run. You can leave the default empty sheet as-is.
+3. The bot will create the four tabs (`participants`, `log`, `bodyweight`, `triathlon`) and write headers automatically on first run. You can leave the default empty sheet as-is.
 
 ### 4. Create the Google service account
 
@@ -81,10 +82,11 @@ In your Telegram group:
 /help        — should print the full instructions
 /join        — bot asks for your height (cm), then body weight (kg)
 /log bench 100 yes
+/log bike 40 1:05:00
 /week        — shows the current week's table
 ```
 
-Open your Google Sheet — you should see the three tabs populated.
+Open your Google Sheet — you should see the four tabs populated.
 
 ## Local development
 
@@ -107,7 +109,7 @@ pnpm -F ciclobot lint
 
 - **TypeScript strict mode + zod everywhere.** Every external input (env, Telegram updates, Google Sheets rows) is parsed through a zod schema; TS types are `z.infer<typeof Schema>`. There are no `as` casts, no `!` non-null assertions, and no `any`.
 - **Join key is `user_id`.** Telegram's numeric user ID is immutable and used as the foreign key for every row. `username` is denormalized for display.
-- **Sheet writes are upserts on a composite key.** `(iso_week, user_id, lift)` for lifts and `(iso_week, user_id)` for bodyweight — re-logging in the same week overwrites.
+- **Sheet writes are upserts on a composite key.** `(iso_week, user_id, lift)` for lifts and `(iso_week, user_id)` for bodyweight — re-logging in the same week overwrites. Triathlon sessions are the exception: they're append-only (keyed on `(user_id, logged_at)`), so every session is kept and the write skips the read-then-dedup an upsert does. `/undo <discipline>` removes the latest session of that discipline this week.
 - **The bot is locked to a single group** via `CHAT_ID`. Updates from DMs or other groups are dropped by the `onlyChat` middleware.
 
 ## Troubleshooting

@@ -47,11 +47,11 @@ async function main(): Promise<void> {
   await bot.api.setMyCommands([
     { command: "join", description: "Enter the challenge" },
     { command: "leave", description: "Leave the challenge" },
-    { command: "log", description: "Log a lift: /log <lift> <kg> <made|missed>" },
+    { command: "log", description: "Log a lift or triathlon session: /log <lift> <kg> <made|missed> or /log <bike|swim|run> <km> <time>" },
     { command: "weight", description: "Log body weight: /weight <kg>" },
     { command: "week", description: "Show this week's table" },
     { command: "history", description: "Show your last 8 weeks" },
-    { command: "undo", description: "Undo this week's entry: /undo <lift|bodyweight>" },
+    { command: "undo", description: "Undo this week's entry: /undo <lift|bodyweight|bike|swim|run>" },
     { command: "participants", description: "List active participants" },
     { command: "cancel", description: "Cancel an in-progress flow" },
     { command: "help", description: "How the bot works" },
