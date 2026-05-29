@@ -16,7 +16,10 @@ const RawEnvSchema = z.object({
   BOT_TOKEN: NonEmptyString,
   GEMINI_API_KEY: NonEmptyString,
   CHAT_ID: z.coerce.number().int(),
-  TRIGGER_WORDS: TriggerWords.default("claude,claudio"),
+  TRACTOR_TRIGGER_WORDS: TriggerWords.default("claude,claudio"),
+  LUDDITE_TRIGGER_WORDS: TriggerWords.default(
+    "ludita,luditas,luddite,luddites",
+  ),
   COOLDOWN_SECONDS: z.coerce.number().int().min(0).default(60),
   GEMINI_MODEL: NonEmptyString.default("gemini-2.5-flash-image"),
 });
@@ -25,7 +28,10 @@ const ConfigSchema = RawEnvSchema.transform((raw) => ({
   botToken: raw.BOT_TOKEN,
   geminiApiKey: raw.GEMINI_API_KEY,
   chatId: raw.CHAT_ID,
-  triggerWords: raw.TRIGGER_WORDS,
+  triggerGroups: [
+    { theme: "tractor" as const, words: raw.TRACTOR_TRIGGER_WORDS },
+    { theme: "luddite" as const, words: raw.LUDDITE_TRIGGER_WORDS },
+  ],
   cooldownSeconds: raw.COOLDOWN_SECONDS,
   geminiModel: raw.GEMINI_MODEL,
 }));

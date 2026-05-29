@@ -7,7 +7,7 @@ A small monorepo of personal Telegram bots and the shared bits they're built on.
 ### Bots
 
 - **[ciclobot](apps/ciclobot)** — tracks a small group's weekly 5×5 weightlifting numbers (bench, squat, deadlift; optionally clean-and-jerk and snatch) plus body weight, in a Google Sheet. Sunday-evening reminder for anyone who hasn't logged. See [apps/ciclobot/README.md](apps/ciclobot/README.md) for full setup.
-- **[tractorbot](apps/tractorbot)** — listens to a group chat and, whenever someone says `claude` or `claudio`, replies with a freshly Gemini-generated image of a monkey driving a tractor. Each prompt randomises style, tractor, setting, and quirks; trailing text in the trigger message becomes a hint to the model. See [apps/tractorbot/README.md](apps/tractorbot/README.md) for full setup.
+- **[tractorbot](apps/tractorbot)** — listens to a group chat and turns keywords into Gemini-generated monkey images: `claude`/`claudio` for tractor scenes, and `ludita`/`luditas`/`luddite`/`luddites` for anti-technology scenes. Trailing text in the trigger message becomes a hint to the model. See [apps/tractorbot/README.md](apps/tractorbot/README.md) for full setup.
 - **[los_piratas_bot](apps/los_piratas_bot)** — enforces "English Friday" in a Spanish-speaking Telegram group. Opt-in via `/join`. Insults Spanish messages from joined members on Fridays and corrects bad English, in the voice of a drunken pirate under Don Blas de Lezo. Stores its member list in a tab on ciclobot's spreadsheet; Gemini 2.5 Flash for the persona. See [apps/los_piratas_bot/README.md](apps/los_piratas_bot/README.md) for full setup.
 - **[rpvbot](apps/rpvbot)** — **Capitán RPV**, group chronicler. 09:00 daily narrative summary of yesterday's chat; `/rpv <N>` or `/rpv <question>` on demand (free-text questions are answered from the persisted chat history, with hostile-input defence in the system prompt); 12:00 daily cron that incrementally updates a per-member "soul" (length-capped personality sketch). Persists text messages and stickers to `rpv_messages` (30-day rolling); summaries to `rpv_summaries`; souls to `rpv_souls`. Spanish on Mon–Thu + weekends, English on Fridays. Gemini 2.5 Flash. See [apps/rpvbot/README.md](apps/rpvbot/README.md) for full setup.
 
@@ -31,7 +31,7 @@ Mostly me, and a handful of friends. If you want to:
 
 ## Conventions
 
-- **Node 24** (current LTS). Pinned in `package.json` engines and both Dockerfiles' base image.
+- **Node 24** (current LTS). Pinned in `package.json` engines and every app Dockerfile's base image.
 - **TypeScript strict mode** with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
 - **Zod is the source of truth for every data shape.** TS types are derived via `z.infer`. No `as`, no `!`, no `any` — enforced by `eslint`.
 - **pnpm workspaces.** Each app and each shared package has its own `package.json` and `tsconfig.json` extending `tsconfig.base.json`.

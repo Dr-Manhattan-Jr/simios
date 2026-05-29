@@ -2,14 +2,15 @@
 
 ![tractorbot](./docs/banner.png)
 
-Telegram bot that listens to a group chat and, whenever someone says the word **claude** or **claudio**, replies with a freshly Gemini-generated image of a monkey driving a tractor. Each prompt randomizes style, tractor, setting, and quirks for entropy.
+Telegram bot that listens to a group chat and turns configured keywords into freshly Gemini-generated monkey images. **claude** and **claudio** generate a monkey driving a tractor; **ludita**, **luditas**, **luddite**, and **luddites** generate a monkey opposing technology or modern advances.
 
 ## What it does
 
 - **Listens to every text message** in one configured group.
-- **Trigger words** (default `claude,claudio`, case-insensitive, whole-word match) fire a generation.
-- **Each generation** picks random parts (style/tractor/setting/quirk/mood/pose/camera-angle/time-of-day/lighting) and asks `gemini-2.5-flash-image` for an image.
-- **Whatever else you wrote alongside the trigger word becomes part of the prompt** — `claude un buen john deere` steers the image toward a John Deere; `claude pirate ship` makes the tractor a pirate ship. Empty messages (just `claude`) generate fully at random.
+- **Trigger words** are grouped by image theme, case-insensitive and whole-word only.
+- **Tractor triggers** default to `claude,claudio`; **luddite triggers** default to `ludita,luditas,luddite,luddites`.
+- **Each generation** picks random parts for the matched theme and asks `gemini-2.5-flash-image` for an image.
+- **Whatever else you wrote alongside the trigger word becomes part of the prompt** — `claude un buen john deere` steers the tractor image toward a John Deere; `ludita contra los patinetes electricos` steers the luddite image toward that theme. Empty messages generate fully at random.
 - **Reply** with the photo, captioned with the style and (if you gave one) your hint.
 - **Cooldown** (default 60 s) keeps spam contained when the chat is hot.
 
@@ -37,7 +38,8 @@ You need:
 | `BOT_TOKEN` | yes | — | BotFather token. |
 | `GEMINI_API_KEY` | yes | — | AI Studio key. |
 | `CHAT_ID` | yes | — | Negative numeric ID of the target group. |
-| `TRIGGER_WORDS` | no | `claude,claudio` | Comma-separated, case-insensitive, whole-word. |
+| `TRACTOR_TRIGGER_WORDS` | no | `claude,claudio` | Comma-separated tractor-image triggers. Case-insensitive, whole-word. |
+| `LUDDITE_TRIGGER_WORDS` | no | `ludita,luditas,luddite,luddites` | Comma-separated luddite-image triggers. Case-insensitive, whole-word. |
 | `COOLDOWN_SECONDS` | no | `60` | Minimum seconds between successful generations. |
 | `GEMINI_MODEL` | no | `gemini-2.5-flash-image` | Override only if Google renames the model. |
 
